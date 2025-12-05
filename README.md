@@ -49,6 +49,7 @@ All configuration is done with environment variables:
 | `NO_STATS`         | empty/false | No       | If set, skip collecting per-snapshot stats from `restic stats` (size and file counts).                       |
 | `NO_LOCKS`         | empty/false | No       | If set, skip lock counting.                                                                                  |
 | `INCLUDE_PATHS`    | empty/false | No       | If set, include snapshot paths in metrics (comma-separated).                                                 |
+| `INCLUDE_CLIENTS`  | empty/false | No       | Comma-separated list of client hostnames to include; if set, snapshots from other clients are ignored.       |
 | `INSECURE_TLS`     | empty/false | No       | If set, skip TLS verification (self-signed endpoints).                                                       |
 
 ### Configuration for Rclone

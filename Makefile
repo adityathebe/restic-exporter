@@ -21,6 +21,10 @@ build:
 docker:
 	$(DOCKER) build -t $(IMAGE):$(TAG) .
 
+.PHONY: test
+test:
+	$(GO) test -v ./... 
+
 .PHONY: linux
 linux:
 	GOOS=linux GOARCH=amd64 go build  -o ./bin/$(NAME)_linux_amd64 -ldflags "-X \"main.version=$(VERSION_TAG)\""  ./src

@@ -45,6 +45,7 @@ type config struct {
 	DisableLocks    bool
 	IncludePaths    bool
 	InsecureTLS     bool
+	IncludeClients  []string
 }
 
 func main() {
@@ -85,6 +86,7 @@ func main() {
 		DisableLocks:    envBool("NO_LOCKS"),
 		IncludePaths:    envBool("INCLUDE_PATHS"),
 		InsecureTLS:     envBool("INSECURE_TLS"),
+		IncludeClients:  envCSV("INCLUDE_CLIENTS"),
 	}
 
 	collector := newResticCollector(cfg)

@@ -204,6 +204,7 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 	if err != nil {
 		return metrics{}, err
 	}
+	allSnapshots = c.filterSnapshotsByClient(allSnapshots)
 	logger.Debug("Loaded total snapshots", "count", len(allSnapshots))
 
 	snapshotCounts := make(map[string]int)
@@ -211,13 +212,8 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 		snapshotCounts[snap.Hash]++
 	}
 
-	latestSnapshotsRaw, err := c.getSnapshots(true)
-	if err != nil {
-		return metrics{}, err
-	}
-
 	latestSnapshots := make(map[string]snapshot)
-	for _, snap := range latestSnapshotsRaw {
+	for _, snap := range allSnapshots {
 		ts, err := parseResticTime(snap.Time)
 		if err != nil {
 			return metrics{}, fmt.Errorf("parse snapshot time %q: %w", snap.Time, err)
@@ -285,6 +281,33 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 		SnapshotsTotal: float64(len(allSnapshots)),
 		Duration:       time.Since(start).Seconds(),
 	}, nil
+}
+
+func (c *resticCollector) filterSnapshotsByClient(snaps []snapshot) []snapshot {
+	if len(c.cfg.IncludeClients) == 0 {
+		return snaps
+	}
+
+	included := make(map[string]struct{}, len(c.cfg.IncludeClients))
+	for _, client := range c.cfg.IncludeClients {
+		if client == "" {
+			continue
+		}
+		included[client] = struct{}{}
+	}
+
+	filtered := make([]snapshot, 0, len(snaps))
+	for _, snap := range snaps {
+		if _, ok := included[snap.Hostname]; ok {
+			filtered = append(filtered, snap)
+		}
+	}
+
+	if len(filtered) != len(snaps) {
+		logger.Debug("Filtered snapshots by client", "include_clients", c.cfg.IncludeClients, "before", len(snaps), "after", len(filtered))
+	}
+
+	return filtered
 }
 
 func (c *resticCollector) resticBaseArgs() []string {
