@@ -16,7 +16,7 @@ all: build
 
 build:
 	mkdir -p bin
-	$(GO) build -o bin/restic-exporter ./src
+	CGO_ENABLED=0 $(GO) build -o bin/restic-exporter ./src
 
 docker:
 	$(DOCKER) build -t $(IMAGE):$(TAG) .

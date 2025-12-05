@@ -1,7 +1,7 @@
 services:
   restic-exporter:
     build: .
-    image: ghcr.io/adityathebe/restic-exporter:go
+    image: ghcr.io/adityathebe/restic-exporter:latest
     environment:
       - RESTIC_REPOSITORY=/data
       - RESTIC_PASSWORD=<password_here>
@@ -9,7 +9,7 @@ services:
       # - REFRESH_INTERVAL=1800
       # - LISTEN_PORT=8001
     ports:
-      - "8001:8001"
+      - '8001:8001'
     volumes:
       - /host_path/restic/data:/data
       # - /host_path/restic/password_file:/restic_password_file:ro

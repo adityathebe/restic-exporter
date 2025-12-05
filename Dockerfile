@@ -1,11 +1,11 @@
-FROM golang:1.25.5-alpine AS builder
+FROM golang:1.25.5-bookworm AS builder
 
 WORKDIR /src
 COPY go.mod ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 go build -o /out/restic-exporter .
+RUN make build
 
 FROM alpine:3.20
 ARG RESTIC_VERSION=0.18.1
@@ -15,7 +15,7 @@ RUN apk add --no-cache ca-certificates curl bzip2 \
     && install -m755 /tmp/restic /usr/local/bin/restic \
     && rm /tmp/restic
 
-COPY --from=builder /out/restic-exporter /usr/local/bin/restic-exporter
+COPY --from=builder /src/bin/restic-exporter /usr/local/bin/restic-exporter
 
 EXPOSE 8001
 ENTRYPOINT ["/usr/local/bin/restic-exporter"]
