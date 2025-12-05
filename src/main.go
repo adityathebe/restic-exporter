@@ -90,7 +90,24 @@ func main() {
 	collector := newResticCollector(cfg)
 	prometheus.MustRegister(collector)
 
-	http.Handle("/metrics", promhttp.Handler())
+	metricsHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !collector.Ready() {
+			http.Error(w, "metrics not ready", http.StatusServiceUnavailable)
+			return
+		}
+		promhttp.Handler().ServeHTTP(w, r)
+	})
+
+	http.Handle("/metrics", metricsHandler)
+	http.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		if !collector.Ready() {
+			http.Error(w, "not ready", http.StatusServiceUnavailable)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok\n"))
+	})
+
 	addr := fmt.Sprintf("%s:%d", cfg.ListenAddress, cfg.ListenPort)
 
 	go func() {

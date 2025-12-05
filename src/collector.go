@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -59,6 +60,7 @@ type resticCollector struct {
 	metrics    metrics
 	mu         sync.RWMutex
 	statsMu    sync.Mutex
+	ready      atomic.Bool
 
 	checkDesc            *prometheus.Desc
 	locksDesc            *prometheus.Desc
@@ -187,7 +189,12 @@ func (c *resticCollector) Refresh(exitOnError bool) {
 	c.mu.Lock()
 	c.metrics = m
 	c.mu.Unlock()
+	c.ready.Store(true)
 	logger.Debug("Metrics refresh completed")
+}
+
+func (c *resticCollector) Ready() bool {
+	return c.ready.Load()
 }
 
 func (c *resticCollector) collectMetrics() (metrics, error) {
