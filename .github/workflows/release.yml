@@ -1,0 +1,80 @@
+name: Create Release
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write # allow pushing tags/releases
+
+jobs:
+  semantic-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release-version: ${{ steps.semantic.outputs.release-version }}
+      new-release-published: ${{ steps.semantic.outputs.new-release-published }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: codfish/semantic-release-action@v4
+        id: semantic
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  binary:
+    runs-on: ubuntu-latest
+    needs: semantic-release
+    if: needs.semantic-release.outputs.new-release-published == 'true'
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6
+        with:
+          go-version: v1.25.x
+          cache: false
+
+      - uses: actions/checkout@v5
+
+      - run: make release
+        env:
+          VERSION: v${{ needs.semantic-release.outputs.release-version }}
+
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@81c65b7cd4de9b2570615ce3aad67a41de5b1a13 # v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./.release/*
+          tag: v${{ needs.semantic-release.outputs.release-version }}
+          overwrite: true
+          file_glob: true
+
+  container-image:
+    needs: semantic-release
+    runs-on: ubuntu-latest
+    if: needs.semantic-release.outputs.new-release-published == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Downcase repo
+        run: echo REPOSITORY=adityathebe/restic-exporter >> $GITHUB_ENV
+
+      - name: Docker metadata
+        id: docker_metadata
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ env.REPOSITORY }},ghcr.io/${{ env.REPOSITORY }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.docker_metadata.outputs.tags }}
+          labels: ${{ steps.docker_metadata.outputs.labels }}

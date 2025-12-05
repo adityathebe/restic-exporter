@@ -1,0 +1,118 @@
+package main
+
+import (
+	"fmt"
+	"log/slog"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+)
+
+var logger *slog.Logger
+
+func newLogger(raw string) *slog.Logger {
+	level := slog.LevelInfo
+	switch strings.ToUpper(strings.TrimSpace(raw)) {
+	case "DEBUG":
+		level = slog.LevelDebug
+	case "INFO", "":
+		level = slog.LevelInfo
+	case "WARNING", "WARN":
+		level = slog.LevelWarn
+	case "ERROR":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo
+		fmt.Fprintf(os.Stderr, "WARN Unknown LOG_LEVEL %q, defaulting to INFO\n", raw)
+	}
+
+	return slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
+}
+
+type config struct {
+	Repository      string
+	Password        string
+	PasswordFile    string
+	ListenAddress   string
+	ListenPort      int
+	RefreshInterval time.Duration
+	DisableCheck    bool
+	DisableStats    bool
+	DisableLocks    bool
+	IncludePaths    bool
+	InsecureTLS     bool
+}
+
+func main() {
+	logger = newLogger(os.Getenv("LOG_LEVEL"))
+
+	repoURL := os.Getenv("RESTIC_REPOSITORY")
+	if repoURL == "" {
+		logger.Error("The environment variable RESTIC_REPOSITORY is mandatory")
+		os.Exit(1)
+	}
+
+	password := os.Getenv("RESTIC_PASSWORD")
+	passwordFile := os.Getenv("RESTIC_PASSWORD_FILE")
+	if password == "" && passwordFile == "" {
+		logger.Error("Define RESTIC_PASSWORD or RESTIC_PASSWORD_FILE")
+		os.Exit(1)
+	}
+
+	logger.Info("Starting Restic Prometheus Exporter")
+	logger.Info("It could take a while if the repository is remote")
+
+	listenAddress := os.Getenv("LISTEN_ADDRESS")
+	if listenAddress == "" {
+		listenAddress = "0.0.0.0"
+	}
+	listenPort := envInt("LISTEN_PORT", 8001)
+	refreshSeconds := envInt("REFRESH_INTERVAL", 60*10) // 10 minutes
+
+	cfg := config{
+		Repository:      repoURL,
+		Password:        password,
+		PasswordFile:    passwordFile,
+		ListenAddress:   listenAddress,
+		ListenPort:      listenPort,
+		RefreshInterval: time.Duration(refreshSeconds) * time.Second,
+		DisableCheck:    envBool("NO_CHECK"),
+		DisableStats:    envBool("NO_STATS"),
+		DisableLocks:    envBool("NO_LOCKS"),
+		IncludePaths:    envBool("INCLUDE_PATHS"),
+		InsecureTLS:     envBool("INSECURE_TLS"),
+	}
+
+	collector := newResticCollector(cfg)
+	prometheus.MustRegister(collector)
+
+	http.Handle("/metrics", promhttp.Handler())
+	addr := fmt.Sprintf("%s:%d", cfg.ListenAddress, cfg.ListenPort)
+
+	go func() {
+		logger.Info("Serving metrics", "addr", addr)
+		if err := http.ListenAndServe(addr, nil); err != nil {
+			logger.Error("HTTP server error", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	go func() {
+		// initial refresh without blocking the HTTP server
+		collector.Refresh(true)
+
+		ticker := time.NewTicker(cfg.RefreshInterval)
+		defer ticker.Stop()
+		for {
+			logger.Info("Refreshing stats", "interval_seconds", refreshSeconds)
+			<-ticker.C
+			collector.Refresh(true)
+		}
+	}()
+
+	select {}
+}
