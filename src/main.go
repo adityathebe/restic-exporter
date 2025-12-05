@@ -123,9 +123,17 @@ func main() {
 
 	addr := fmt.Sprintf("%s:%d", cfg.ListenAddress, cfg.ListenPort)
 
+	// Configure HTTP server with timeouts to prevent Slowloris attacks
+	server := &http.Server{
+		Addr:         addr,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
 	go func() {
 		logger.Info("Serving metrics", "addr", addr)
-		if err := http.ListenAndServe(addr, nil); err != nil {
+		if err := server.ListenAndServe(); err != nil {
 			logger.Error("HTTP server error", "error", err)
 			os.Exit(1)
 		}

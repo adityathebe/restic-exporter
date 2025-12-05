@@ -208,6 +208,15 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 	allSnapshots = c.filterSnapshotsByClient(allSnapshots)
 	logger.Debug("Loaded total snapshots", "count", len(allSnapshots))
 
+	// Build set of valid snapshot IDs for cache eviction
+	validSnapshotIDs := make(map[string]bool, len(allSnapshots))
+	for _, snap := range allSnapshots {
+		validSnapshotIDs[snap.ID] = true
+	}
+
+	// Evict cache entries for snapshots that no longer exist
+	c.evictStaleStatsCache(validSnapshotIDs)
+
 	snapshotCounts := make(map[string]int)
 	for _, snap := range allSnapshots {
 		snapshotCounts[snap.Hash]++
@@ -382,6 +391,23 @@ func (c *resticCollector) getStats(snapshotID string) (resticStats, error) {
 	}
 
 	return stats, nil
+}
+
+func (c *resticCollector) evictStaleStatsCache(validSnapshotIDs map[string]bool) {
+	c.statsMu.Lock()
+	defer c.statsMu.Unlock()
+
+	var evicted int
+	for snapshotID := range c.statsCache {
+		if !validSnapshotIDs[snapshotID] {
+			delete(c.statsCache, snapshotID)
+			evicted++
+		}
+	}
+
+	if evicted > 0 {
+		logger.Debug("Evicted stale stats cache entries", "count", evicted, "remaining", len(c.statsCache))
+	}
 }
 
 func (c *resticCollector) getCheck() (float64, error) {
