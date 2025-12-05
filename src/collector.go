@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -178,7 +179,7 @@ func (c *resticCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(c.scrapeDurationDesc, prometheus.GaugeValue, m.Duration)
 }
 
-func (c *resticCollector) Refresh(exitOnError bool) {
+func (c *resticCollector) Refresh() {
 	logger.Debug("Starting metrics refresh")
 	m, err := c.collectMetrics()
 	if err != nil {
@@ -423,8 +424,12 @@ func (c *resticCollector) getLocks() (float64, error) {
 }
 
 func (c *resticCollector) runRestic(args []string) ([]byte, string, error) {
+	// Set a timeout of 5 minutes for Restic commands to prevent indefinite hangs
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
 	var stdout, stderr bytes.Buffer
-	cmd := exec.Command("restic", args...)
+	cmd := exec.CommandContext(ctx, "restic", args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if c.cfg.Password != "" && c.cfg.PasswordFile == "" {
