@@ -63,6 +63,9 @@ jobs:
         uses: docker/metadata-action@v3
         with:
           images: ghcr.io/${{ env.REPOSITORY }}
+          tags: |
+            type=raw,value=v${{ needs.semantic-release.outputs.release-version }}
+            type=raw,value=latest
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
