@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write # allow pushing tags/releases
+  packages: write # allow pushing container images
 
 jobs:
   semantic-release:
