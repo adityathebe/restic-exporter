@@ -62,7 +62,7 @@ jobs:
         id: docker_metadata
         uses: docker/metadata-action@v3
         with:
-          images: ${{ env.REPOSITORY }},ghcr.io/${{ env.REPOSITORY }}
+          images: ghcr.io/${{ env.REPOSITORY }}
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
