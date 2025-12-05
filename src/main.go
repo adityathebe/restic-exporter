@@ -5,7 +5,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -72,7 +74,16 @@ func main() {
 		listenAddress = "0.0.0.0"
 	}
 	listenPort := envInt("LISTEN_PORT", 8001)
+	if listenPort < 1 || listenPort > 65535 {
+		logger.Error("LISTEN_PORT must be between 1 and 65535", "port", listenPort)
+		os.Exit(1)
+	}
+
 	refreshSeconds := envInt("REFRESH_INTERVAL", 60*10) // 10 minutes
+	if refreshSeconds <= 0 {
+		logger.Error("REFRESH_INTERVAL must be greater than 0", "seconds", refreshSeconds)
+		os.Exit(1)
+	}
 
 	cfg := config{
 		Repository:      repoURL,
@@ -112,9 +123,17 @@ func main() {
 
 	addr := fmt.Sprintf("%s:%d", cfg.ListenAddress, cfg.ListenPort)
 
+	// Configure HTTP server with timeouts to prevent Slowloris attacks
+	server := &http.Server{
+		Addr:         addr,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
 	go func() {
 		logger.Info("Serving metrics", "addr", addr)
-		if err := http.ListenAndServe(addr, nil); err != nil {
+		if err := server.ListenAndServe(); err != nil {
 			logger.Error("HTTP server error", "error", err)
 			os.Exit(1)
 		}
@@ -122,16 +141,21 @@ func main() {
 
 	go func() {
 		// initial refresh without blocking the HTTP server
-		collector.Refresh(true)
+		collector.Refresh()
 
 		ticker := time.NewTicker(cfg.RefreshInterval)
 		defer ticker.Stop()
 		for {
 			logger.Info("Refreshing stats", "interval_seconds", refreshSeconds)
 			<-ticker.C
-			collector.Refresh(true)
+			collector.Refresh()
 		}
 	}()
 
-	select {}
+	// Wait for interrupt signal to gracefully shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	sig := <-sigChan
+	logger.Info("Received shutdown signal, exiting gracefully", "signal", sig)
 }

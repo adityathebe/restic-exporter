@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -178,7 +179,7 @@ func (c *resticCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(c.scrapeDurationDesc, prometheus.GaugeValue, m.Duration)
 }
 
-func (c *resticCollector) Refresh(exitOnError bool) {
+func (c *resticCollector) Refresh() {
 	logger.Debug("Starting metrics refresh")
 	m, err := c.collectMetrics()
 	if err != nil {
@@ -206,6 +207,15 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 	}
 	allSnapshots = c.filterSnapshotsByClient(allSnapshots)
 	logger.Debug("Loaded total snapshots", "count", len(allSnapshots))
+
+	// Build set of valid snapshot IDs for cache eviction
+	validSnapshotIDs := make(map[string]bool, len(allSnapshots))
+	for _, snap := range allSnapshots {
+		validSnapshotIDs[snap.ID] = true
+	}
+
+	// Evict cache entries for snapshots that no longer exist
+	c.evictStaleStatsCache(validSnapshotIDs)
 
 	snapshotCounts := make(map[string]int)
 	for _, snap := range allSnapshots {
@@ -383,6 +393,23 @@ func (c *resticCollector) getStats(snapshotID string) (resticStats, error) {
 	return stats, nil
 }
 
+func (c *resticCollector) evictStaleStatsCache(validSnapshotIDs map[string]bool) {
+	c.statsMu.Lock()
+	defer c.statsMu.Unlock()
+
+	var evicted int
+	for snapshotID := range c.statsCache {
+		if !validSnapshotIDs[snapshotID] {
+			delete(c.statsCache, snapshotID)
+			evicted++
+		}
+	}
+
+	if evicted > 0 {
+		logger.Debug("Evicted stale stats cache entries", "count", evicted, "remaining", len(c.statsCache))
+	}
+}
+
 func (c *resticCollector) getCheck() (float64, error) {
 	args := append(c.resticBaseArgs(), "check")
 	if c.cfg.InsecureTLS {
@@ -423,8 +450,12 @@ func (c *resticCollector) getLocks() (float64, error) {
 }
 
 func (c *resticCollector) runRestic(args []string) ([]byte, string, error) {
+	// Set a timeout of 5 minutes for Restic commands to prevent indefinite hangs
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
 	var stdout, stderr bytes.Buffer
-	cmd := exec.Command("restic", args...)
+	cmd := exec.CommandContext(ctx, "restic", args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if c.cfg.Password != "" && c.cfg.PasswordFile == "" {

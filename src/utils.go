@@ -85,7 +85,14 @@ func snapshotPaths(includePaths bool, paths []string) string {
 
 func envBool(name string) bool {
 	val, ok := os.LookupEnv(name)
-	return ok && strings.TrimSpace(val) != ""
+	if !ok {
+		return false
+	}
+	b, err := strconv.ParseBool(strings.TrimSpace(val))
+	if err != nil {
+		return false
+	}
+	return b
 }
 
 func envInt(name string, defaultVal int) int {
