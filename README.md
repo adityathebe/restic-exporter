@@ -18,53 +18,6 @@ Docker images are available in [GHCR](https://github.com/adityathebe/restic-expo
 docker pull ghcr.io/adityathebe/restic-exporter
 ```
 
-#### Supported Architectures
-
-The architectures supported by this image are:
-
-- linux/386
-- linux/amd64
-- linux/arm/v6
-- linux/arm/v7
-- linux/arm64/v8
-- linux/ppc64le
-- linux/s390x
-
-#### docker-compose
-
-Compatible with docker-compose v2 schemas:
-
-```yaml
-services:
-  restic-exporter:
-    build: .
-    image: restic-exporter:go
-    environment:
-      - RESTIC_REPOSITORY=/data
-      - RESTIC_PASSWORD=<password_here>
-      # - RESTIC_PASSWORD_FILE=</file_with_password_here>
-      - REFRESH_INTERVAL=1800 # 30 min
-    volumes:
-      - /host_path/restic/data:/data
-    ports:
-      - '8001:8001'
-    restart: unless-stopped
-```
-
-#### docker cli
-
-```bash
-docker run -d \
-  --name=restic-exporter \
-  -e TZ=Europe/Madrid \
-  -e RESTIC_REPOSITORY=/data \
-  -e RESTIC_PASSWORD=<password_here> \
-  -e REFRESH_INTERVAL=1800 \
-  -p 8001:8001 \
-  --restart unless-stopped \
-  ngosang/restic-exporter
-```
-
 ## Configuration
 
 This Prometheus exporter is compatible with all [backends supported by Restic](https://restic.readthedocs.io/en/latest/030_preparing_a_new_repo.html).
@@ -72,47 +25,31 @@ Some of them need additional environment variables for the secrets.
 
 All configuration is done with environment variables:
 
-- `RESTIC_REPOSITORY`: Restic repository URL. All backends are supported. Examples:
+**Restic configuration (required for restic to work)**
 
-  - Local repository: `/data`
-  - REST Server: `rest:http://user:password@127.0.0.1:8000/`
-  - Amazon S3: `s3:s3.amazonaws.com/bucket_name`
-  - Backblaze B2: `b2:bucketname:path/to/repo`
-  - Rclone (see notes below): `rclone:gd-backup:/restic`
+| Variable                | Default | Required         | Description                                                                                                                                                              |
+| ----------------------- | ------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `RESTIC_REPOSITORY`     | –       | Yes              | Repository URL (e.g. `/data`, `rest:http://user:password@127.0.0.1:8000/`, `s3:s3.amazonaws.com/bucket_name`, `b2:bucketname:path/to/repo`, `rclone:gd-backup:/restic`). |
+| `RESTIC_PASSWORD`       | –       | One of           | Repo password (plain text). Required if `RESTIC_PASSWORD_FILE` is not set.                                                                                               |
+| `RESTIC_PASSWORD_FILE`  | –       | One of           | Path to a file containing the repo password. Required if `RESTIC_PASSWORD` is not set; mount it into the container.                                                      |
+| `AWS_ACCESS_KEY_ID`     | –       | Backend-specific | For Amazon S3 / Minio / Wasabi.                                                                                                                                          |
+| `AWS_SECRET_ACCESS_KEY` | –       | Backend-specific | For Amazon S3 / Minio / Wasabi.                                                                                                                                          |
+| `B2_ACCOUNT_ID`         | –       | Backend-specific | For Backblaze B2.                                                                                                                                                        |
+| `B2_ACCOUNT_KEY`        | –       | Backend-specific | For Backblaze B2.                                                                                                                                                        |
 
-- `RESTIC_PASSWORD`: Restic repository password in plain text. This is only
-  required if `RESTIC_PASSWORD_FILE` is not defined.
-- `RESTIC_PASSWORD_FILE`: File with the Restic repository password in plain
-  text. This is only required if `RESTIC_PASSWORD` is not defined. Remember
-  to mount the Docker volume with the file.
-- `AWS_ACCESS_KEY_ID`: (Optional) Required for Amazon S3, Minio and Wasabi
-  backends.
-- `AWS_SECRET_ACCESS_KEY`: (Optional) Required for Amazon S3, Minio and Wasabi
-  backends.
-- `B2_ACCOUNT_ID`: (Optional) Required for Backblaze B2 backend.
-- `B2_ACCOUNT_KEY`: (Optional) Required for Backblaze B2 backend.
-- `REFRESH_INTERVAL`: (Optional) Refresh interval for the metrics in seconds.
-  Computing the metrics is an expensive task, keep this value as high as possible.
-  Default is `60` seconds.
-  - **WARNING**: With default settings, downloading from remote repositories
-    may be costly if using this exporter with a remote Cloud-based restic repository
-    (e.g. GCP GCS, Amazon S3). This may cause a surprisingly high spike in your
-    infrastructure costs (e.g. for small restic repositories that don't download
-    frequently, this may increase your costs by multiple orders of magnitude).
-    Consider setting `REFRESH_INTERVAL` to considerably higher values (e.g. `86400`
-    for once per day) to lower this impact.
-- `LISTEN_PORT`: (Optional) The address the exporter should listen on. The
-  default is `8001`.
-- `LISTEN_ADDRESS`: (Optional) The address the exporter should listen on. The
-  default is to listen on all addresses.
-- `LOG_LEVEL`: (Optional) Log level of the traces. The default is `INFO`.
-- `NO_CHECK`: (Optional) Do not perform `restic check` operation for performance
-  reasons. Default is `False` (perform `restic check`).
-- `NO_STATS`: (Optional) Do not collect per backup statistics for performance
-  reasons. Default is `False` (collect per backup statistics).
-- `NO_LOCKS`: (Optional) Do not collect the number of locks. Default is `False` (collect the number of locks).
-- `INCLUDE_PATHS`: (Optional) Include snapshot paths for each backup. The paths are separated by commas. Default is `False` (not collect the paths).
-- `INSECURE_TLS`: (Optional) skip TLS verification for self-signed certificates. Default is `False` (not skip).
+**Exporter behavior (controls how the exporter runs)**
+
+| Variable           | Default     | Required | Description                                                                                                  |
+| ------------------ | ----------- | -------- | ------------------------------------------------------------------------------------------------------------ |
+| `REFRESH_INTERVAL` | `600`       | No       | Refresh interval (seconds) for collecting metrics. Higher values reduce load, especially on remote backends. |
+| `LISTEN_ADDRESS`   | `0.0.0.0`   | No       | Bind address for the HTTP server.                                                                            |
+| `LISTEN_PORT`      | `8001`      | No       | Port for the HTTP server.                                                                                    |
+| `LOG_LEVEL`        | `INFO`      | No       | Log level (`DEBUG`, `INFO`, `WARN`, `ERROR`).                                                                |
+| `NO_CHECK`         | empty/false | No       | If set, skip `restic check` for faster scrapes.                                                              |
+| `NO_STATS`         | empty/false | No       | If set, skip collecting per-snapshot stats from `restic stats` (size and file counts).                       |
+| `NO_LOCKS`         | empty/false | No       | If set, skip lock counting.                                                                                  |
+| `INCLUDE_PATHS`    | empty/false | No       | If set, include snapshot paths in metrics (comma-separated).                                                 |
+| `INSECURE_TLS`     | empty/false | No       | If set, skip TLS verification (self-signed endpoints).                                                       |
 
 ### Configuration for Rclone
 
