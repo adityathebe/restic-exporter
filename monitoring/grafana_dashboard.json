@@ -181,6 +181,7 @@
           },
           "exemplar": true,
           "expr": "time() - max without (pod, instance, endpoint) (restic_last_scrape_timestamp_seconds)",
+          "instant": true,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
