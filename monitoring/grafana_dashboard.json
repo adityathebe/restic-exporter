@@ -108,7 +108,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "restic_check_success",
+          "expr": "max without (pod, instance) (restic_check_success)",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -136,16 +136,16 @@
                 "value": null
               },
               {
-                "color": "yellow",
-                "value": 3600
+                "color": "orange",
+                "value": 900
               },
               {
                 "color": "red",
-                "value": 7200
+                "value": 1800
               }
             ]
           },
-          "unit": "dateTimeFromNow"
+          "unit": "s"
         },
         "overrides": []
       },
@@ -180,7 +180,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "restic_last_scrape_timestamp_seconds * 1000",
+          "expr": "time() - restic_last_scrape_timestamp_seconds",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
