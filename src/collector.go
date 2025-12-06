@@ -48,11 +48,12 @@ type clientMetrics struct {
 }
 
 type metrics struct {
-	CheckSuccess   float64
-	LocksTotal     float64
-	Clients        []clientMetrics
-	SnapshotsTotal float64
-	Duration       float64
+	CheckSuccess    float64
+	LocksTotal      float64
+	Clients         []clientMetrics
+	SnapshotsTotal  float64
+	Duration        float64
+	ScrapeTimestamp float64
 }
 
 type resticCollector struct {
@@ -71,6 +72,7 @@ type resticCollector struct {
 	backupSizeTotalDesc  *prometheus.Desc
 	backupSnapshotsDesc  *prometheus.Desc
 	scrapeDurationDesc   *prometheus.Desc
+	scrapeTimestampDesc  *prometheus.Desc
 }
 
 func newResticCollector(cfg config) *resticCollector {
@@ -136,6 +138,12 @@ func newResticCollector(cfg config) *resticCollector {
 			nil,
 			nil,
 		),
+		scrapeTimestampDesc: prometheus.NewDesc(
+			"restic_last_scrape_timestamp_seconds",
+			"Unix timestamp of the last metrics scrape from the restic repository",
+			nil,
+			nil,
+		),
 	}
 }
 
@@ -148,10 +156,10 @@ func (c *resticCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.backupSizeTotalDesc
 	ch <- c.backupSnapshotsDesc
 	ch <- c.scrapeDurationDesc
+	ch <- c.scrapeTimestampDesc
 }
 
 func (c *resticCollector) Collect(ch chan<- prometheus.Metric) {
-	logger.Debug("Incoming scrape request")
 	c.mu.RLock()
 	m := c.metrics
 	c.mu.RUnlock()
@@ -177,6 +185,7 @@ func (c *resticCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	ch <- prometheus.MustNewConstMetric(c.scrapeDurationDesc, prometheus.GaugeValue, m.Duration)
+	ch <- prometheus.MustNewConstMetric(c.scrapeTimestampDesc, prometheus.GaugeValue, m.ScrapeTimestamp)
 }
 
 func (c *resticCollector) Refresh() {
@@ -285,11 +294,12 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 	logger.Debug("Locks collected", "value", locksTotal)
 
 	return metrics{
-		CheckSuccess:   checkSuccess,
-		LocksTotal:     locksTotal,
-		Clients:        clients,
-		SnapshotsTotal: float64(len(allSnapshots)),
-		Duration:       time.Since(start).Seconds(),
+		CheckSuccess:    checkSuccess,
+		LocksTotal:      locksTotal,
+		Clients:         clients,
+		SnapshotsTotal:  float64(len(allSnapshots)),
+		Duration:        time.Since(start).Seconds(),
+		ScrapeTimestamp: float64(time.Now().Unix()),
 	}, nil
 }
 
