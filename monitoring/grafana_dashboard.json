@@ -137,11 +137,11 @@
               },
               {
                 "color": "orange",
-                "value": 900
+                "value": 3600
               },
               {
                 "color": "red",
-                "value": 1800
+                "value": 4000
               }
             ]
           },

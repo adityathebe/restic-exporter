@@ -112,7 +112,7 @@ spec:
 
         - alert: ResticNoRecentScrape
           expr: time() - restic_last_scrape_timestamp_seconds > 3600 # 1 hour
-          for: 5m
+          for: 10m
           labels:
             severity: warning
           annotations:
