@@ -1,7 +1,7 @@
 services:
   restic-exporter:
     build: .
-    image: ghcr.io/adityathebe/restic-exporter:latest
+    image: ghcr.io/adityathebe/restic-exporter:local
     environment:
       RESTIC_REPOSITORY: ${RESTIC_REPOSITORY:-/data}
       RESTIC_PASSWORD: ${RESTIC_PASSWORD:-}
