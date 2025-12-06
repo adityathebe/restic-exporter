@@ -121,34 +121,13 @@ scrape_configs:
 
 ## Prometheus / Alertmanager rules
 
-Example Prometheus rules for alerting:
-
-```yaml
-- alert: ResticCheckFailed
-  expr: restic_check_success == 0
-  for: 5m
-  labels:
-    severity: critical
-  annotations:
-    summary: Restic check failed (instance {{ $labels.instance }})
-    description: Restic check failed\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}
-
-- alert: ResticOutdatedBackup
-  # 1209600 = 15 days
-  expr: time() - restic_backup_timestamp > 1209600
-  for: 0m
-  labels:
-    severity: critical
-  annotations:
-    summary: Restic {{ $labels.client_hostname }} / {{ $labels.client_username }} backup is outdated
-    description: Restic backup is outdated\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}
-```
+Reference [prometheus_rule.yaml](./monitoring/prometheus_rule.yaml)
 
 ## Grafana dashboard
 
-There is a reference Grafana dashboard in [grafana/grafana_dashboard.json](./grafana/grafana_dashboard.json).
+There is a reference Grafana dashboard in [monitoring/grafana_dashboard.json](./monitoring/grafana_dashboard.json).
 
-![](./grafana/grafana_dashboard.png)
+![](./monitoring/grafana_dashboard.png)
 
 ---
 
