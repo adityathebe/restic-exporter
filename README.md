@@ -103,6 +103,9 @@ restic_backup_snapshots_total{client_hostname="product.example.com",client_usern
 # HELP restic_scrape_duration_seconds Amount of time each scrape takes
 # TYPE restic_scrape_duration_seconds gauge
 restic_scrape_duration_seconds 166.9411084651947
+# HELP restic_last_scrape_timestamp_seconds Unix timestamp of the last metrics scrape
+# TYPE restic_last_scrape_timestamp_seconds gauge
+restic_last_scrape_timestamp_seconds 1.699e+09
 ```
 
 ## Prometheus config
