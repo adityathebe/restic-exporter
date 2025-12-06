@@ -180,13 +180,13 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "time() - restic_last_scrape_timestamp_seconds",
+          "expr": "time() - max without (pod, instance, endpoint) (restic_last_scrape_timestamp_seconds)",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         }
       ],
-      "title": "Last Scrape Time",
+      "title": "Last Scraped",
       "type": "stat"
     },
     {
@@ -516,7 +516,7 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 18,
+        "w": 8,
         "x": 0,
         "y": 13
       },
@@ -542,110 +542,16 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "sum by(client_hostname,client_username) (restic_backup_size_total)",
+          "expr": "sum by(client_hostname,snapshot_paths) (restic_backup_size_total)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "{{client_hostname}}",
+          "legendFormat": "{{client_hostname}} - {{snapshot_paths}}",
           "refId": "A"
         }
       ],
       "title": "Total backup size",
       "type": "timeseries"
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "description": "",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            }
-          },
-          "mappings": [],
-          "unit": "bytes"
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 7,
-        "w": 6,
-        "x": 18,
-        "y": 13
-      },
-      "id": 35,
-      "maxDataPoints": 100,
-      "options": {
-        "displayLabels": ["percent"],
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": false,
-          "values": []
-        },
-        "pieType": "donut",
-        "reduceOptions": {
-          "calcs": ["lastNotNull"],
-          "fields": "/^Value$/",
-          "values": true
-        },
-        "sort": "desc",
-        "tooltip": {
-          "hideZeros": false,
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "pluginVersion": "12.3.0",
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "exemplar": true,
-          "expr": "sum by (client_hostname, snapshot_paths) (restic_backup_size_total)",
-          "format": "table",
-          "instant": true,
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "{{client_hostname}}",
-          "refId": "A"
-        }
-      ],
-      "title": "Total backup size",
-      "transformations": [
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": false,
-              "__name__": true,
-              "backup_id": true,
-              "client_hostname": false,
-              "client_username": true,
-              "instance": true,
-              "job": true,
-              "snapshot_id": true
-            },
-            "indexByName": {},
-            "renameByName": {
-              "Value": "",
-              "snapshot_id": ""
-            }
-          }
-        }
-      ],
-      "type": "piechart"
     },
     {
       "datasource": {
@@ -713,9 +619,9 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 15,
-        "x": 0,
-        "y": 20
+        "w": 8,
+        "x": 8,
+        "y": 13
       },
       "id": 41,
       "options": {
@@ -739,11 +645,11 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "sum by(client_hostname,client_username) (restic_backup_files_total)",
+          "expr": "sum by(client_hostname,snapshot_paths) (restic_backup_files_total)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "{{client_hostname}}",
+          "legendFormat": "{{client_hostname}} - {{snapshot_paths}}",
           "refId": "A"
         }
       ],
@@ -816,9 +722,9 @@
       },
       "gridPos": {
         "h": 7,
-        "w": 9,
-        "x": 15,
-        "y": 20
+        "w": 8,
+        "x": 16,
+        "y": 13
       },
       "id": 30,
       "options": {
@@ -842,11 +748,11 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "sum by(client_hostname,client_username) (restic_backup_snapshots_total)",
+          "expr": "max by(client_hostname,snapshot_paths) (restic_backup_snapshots_total)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
-          "legendFormat": "{{client_hostname}}",
+          "legendFormat": "{{client_hostname}} - {{snapshot_paths}}",
           "refId": "A"
         }
       ],
@@ -862,7 +768,7 @@
     "list": []
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-7d",
     "to": "now"
   },
   "timepicker": {},
