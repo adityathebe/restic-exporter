@@ -39,18 +39,19 @@ All configuration is done with environment variables:
 
 **Exporter behavior (controls how the exporter runs)**
 
-| Variable            | Default     | Required | Description                                                                                                  |
-| ------------------- | ----------- | -------- | ------------------------------------------------------------------------------------------------------------ |
-| `REFRESH_INTERVAL`  | `600`       | No       | Refresh interval (seconds) for collecting metrics. Higher values reduce load, especially on remote backends. |
-| `LISTEN_ADDRESS`    | `0.0.0.0`   | No       | Bind address for the HTTP server.                                                                            |
-| `LISTEN_PORT`       | `8001`      | No       | Port for the HTTP server.                                                                                    |
-| `LOG_LEVEL`         | `INFO`      | No       | Log level (`DEBUG`, `INFO`, `WARN`, `ERROR`).                                                                |
-| `NO_CHECK`          | empty/false | No       | If set, skip `restic check` for faster scrapes.                                                              |
-| `NO_LOCKS`          | empty/false | No       | If set, skip lock counting.                                                                                  |
-| `NO_STATS_RAW_DATA` | empty/false | No       | If set, skip repository-wide raw data stats (`restic stats --mode raw-data`) and related metrics.            |
-| `INCLUDE_PATHS`     | empty/false | No       | If set, include snapshot paths in metrics (comma-separated).                                                 |
-| `INCLUDE_CLIENTS`   | empty/false | No       | Comma-separated list of client hostnames to include; if set, snapshots from other clients are ignored.       |
-| `INSECURE_TLS`      | empty/false | No       | If set, skip TLS verification (self-signed endpoints).                                                       |
+| Variable                         | Default     | Required | Description                                                                                                  |
+| -------------------------------- | ----------- | -------- | ------------------------------------------------------------------------------------------------------------ |
+| `REFRESH_INTERVAL`               | `600`       | No       | Refresh interval (seconds) for collecting metrics. Higher values reduce load, especially on remote backends. |
+| `LISTEN_ADDRESS`                 | `0.0.0.0`   | No       | Bind address for the HTTP server.                                                                            |
+| `LISTEN_PORT`                    | `8001`      | No       | Port for the HTTP server.                                                                                    |
+| `LOG_LEVEL`                      | `INFO`      | No       | Log level (`DEBUG`, `INFO`, `WARN`, `ERROR`).                                                                |
+| `NO_CHECK`                       | empty/false | No       | If set, skip `restic check` for faster scrapes.                                                              |
+| `NO_LOCKS`                       | empty/false | No       | If set, skip lock counting.                                                                                  |
+| `NO_STATS_SNAPSHOT_RESTORE_SIZE` | empty/false | No       | If set, skip per-snapshot restore size stats for the latest snapshots (`restic stats <snapshot>`);           |
+| `NO_STATS_RAW_DATA`              | empty/false | No       | If set, skip repository-wide raw data stats (`restic stats --mode raw-data`) and related metrics.            |
+| `INCLUDE_PATHS`                  | empty/false | No       | If set, include snapshot paths in metrics (comma-separated).                                                 |
+| `INCLUDE_CLIENTS`                | empty/false | No       | Comma-separated list of client hostnames to include; if set, snapshots from other clients are ignored.       |
+| `INSECURE_TLS`                   | empty/false | No       | If set, skip TLS verification (self-signed endpoints).                                                       |
 
 ### Configuration for Rclone
 

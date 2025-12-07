@@ -36,19 +36,20 @@ func newLogger(raw string) *slog.Logger {
 }
 
 type config struct {
-	Repository        string
-	Password          string
-	PasswordFile      string
-	ResticBinaryPath  string
-	ListenAddress     string
-	ListenPort        int
-	RefreshInterval   time.Duration
-	DisableCheck      bool
-	DisableLocks      bool
-	DisableStatsRawData bool
-	IncludePaths      bool
-	InsecureTLS       bool
-	IncludeClients    []string
+	Repository                      string
+	Password                        string
+	PasswordFile                    string
+	ResticBinaryPath                string
+	ListenAddress                   string
+	ListenPort                      int
+	RefreshInterval                 time.Duration
+	DisableCheck                    bool
+	DisableLocks                    bool
+	DisableStatsSnapshotRestoreSize bool
+	DisableStatsRawData             bool
+	IncludePaths                    bool
+	InsecureTLS                     bool
+	IncludeClients                  []string
 }
 
 func main() {
@@ -86,19 +87,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	disableSnapshotStats := envBool("NO_STATS_SNAPSHOT_RESTORE_SIZE")
+
 	cfg := config{
-		Repository:        repoURL,
-		Password:          password,
-		PasswordFile:      passwordFile,
-		ListenAddress:     listenAddress,
-		ListenPort:        listenPort,
-		RefreshInterval:   time.Duration(refreshSeconds) * time.Second,
-		DisableCheck:      envBool("NO_CHECK"),
-		DisableLocks:      envBool("NO_LOCKS"),
-		DisableStatsRawData: envBool("NO_STATS_RAW_DATA"),
-		IncludePaths:      envBool("INCLUDE_PATHS"),
-		InsecureTLS:       envBool("INSECURE_TLS"),
-		IncludeClients:    envCSV("INCLUDE_CLIENTS"),
+		Repository:                      repoURL,
+		Password:                        password,
+		PasswordFile:                    passwordFile,
+		ListenAddress:                   listenAddress,
+		ListenPort:                      listenPort,
+		RefreshInterval:                 time.Duration(refreshSeconds) * time.Second,
+		DisableCheck:                    envBool("NO_CHECK"),
+		DisableLocks:                    envBool("NO_LOCKS"),
+		DisableStatsSnapshotRestoreSize: disableSnapshotStats,
+		DisableStatsRawData:             envBool("NO_STATS_RAW_DATA"),
+		IncludePaths:                    envBool("INCLUDE_PATHS"),
+		InsecureTLS:                     envBool("INSECURE_TLS"),
+		IncludeClients:                  envCSV("INCLUDE_CLIENTS"),
 	}
 
 	collector := newResticCollector(cfg)

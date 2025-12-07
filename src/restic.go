@@ -18,13 +18,13 @@ type resticStats struct {
 }
 
 type resticStatsRawData struct {
-	TotalSize             float64 `json:"total_size"`
-	TotalUncompressedSize float64 `json:"total_uncompressed_size"`
-	CompressionRatio      float64 `json:"compression_ratio"`
-	CompressionProgress   float64 `json:"compression_progress"`
+	TotalSize              float64 `json:"total_size"`
+	TotalUncompressedSize  float64 `json:"total_uncompressed_size"`
+	CompressionRatio       float64 `json:"compression_ratio"`
+	CompressionProgress    float64 `json:"compression_progress"`
 	CompressionSpaceSaving float64 `json:"compression_space_saving"`
-	TotalBlobCount        float64 `json:"total_blob_count"`
-	SnapshotsCount        float64 `json:"snapshots_count"`
+	TotalBlobCount         float64 `json:"total_blob_count"`
+	SnapshotsCount         float64 `json:"snapshots_count"`
 }
 
 type snapshot struct {
@@ -92,7 +92,7 @@ func (r *resticClient) getSnapshots(ctx context.Context) ([]snapshot, error) {
 	return snaps, nil
 }
 
-func (r *resticClient) getStats(ctx context.Context, snapshotID string) (resticStats, error) {
+func (r *resticClient) getRestoreSize(ctx context.Context, snapshotID string) (resticStats, error) {
 	if snapshotID != "" {
 		r.statsMu.Lock()
 		stats, ok := r.statsCache[snapshotID]

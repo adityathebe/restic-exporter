@@ -28,39 +28,39 @@ type clientMetrics struct {
 }
 
 type metrics struct {
-	CheckSuccess                   float64
-	LocksTotal                     float64
-	Clients                        []clientMetrics
-	SnapshotsTotal                 float64
-	Duration                       float64
-	ScrapeTimestamp                float64
-	RepositoryTotalSize            float64
+	CheckSuccess                    float64
+	LocksTotal                      float64
+	Clients                         []clientMetrics
+	SnapshotsTotal                  float64
+	Duration                        float64
+	ScrapeTimestamp                 float64
+	RepositoryTotalSize             float64
 	RepositoryTotalUncompressedSize float64
-	CompressionRatio               float64
-	StatsDuration                  float64
+	CompressionRatio                float64
+	StatsDuration                   float64
 }
 
 type resticCollector struct {
-	cfg    config
-	restic *resticClient
-	metrics    metrics
-	mu         sync.RWMutex
-	ready      atomic.Bool
+	cfg     config
+	restic  *resticClient
+	metrics metrics
+	mu      sync.RWMutex
+	ready   atomic.Bool
 
-	checkDesc                *prometheus.Desc
-	locksDesc                *prometheus.Desc
-	snapshotsDesc            *prometheus.Desc
-	backupTimestampDesc      *prometheus.Desc
-	backupFirstTimestampDesc *prometheus.Desc
-	backupFilesTotalDesc     *prometheus.Desc
-	backupSizeTotalDesc      *prometheus.Desc
-	backupSnapshotsDesc                *prometheus.Desc
-	scrapeDurationDesc                 *prometheus.Desc
-	scrapeTimestampDesc                *prometheus.Desc
-	repositoryTotalSizeDesc            *prometheus.Desc
+	checkDesc                           *prometheus.Desc
+	locksDesc                           *prometheus.Desc
+	snapshotsDesc                       *prometheus.Desc
+	backupTimestampDesc                 *prometheus.Desc
+	backupFirstTimestampDesc            *prometheus.Desc
+	backupFilesTotalDesc                *prometheus.Desc
+	backupSizeTotalDesc                 *prometheus.Desc
+	backupSnapshotsDesc                 *prometheus.Desc
+	scrapeDurationDesc                  *prometheus.Desc
+	scrapeTimestampDesc                 *prometheus.Desc
+	repositoryTotalSizeDesc             *prometheus.Desc
 	repositoryTotalUncompressedSizeDesc *prometheus.Desc
-	compressionRatioDesc               *prometheus.Desc
-	statsDurationDesc                  *prometheus.Desc
+	compressionRatioDesc                *prometheus.Desc
+	statsDurationDesc                   *prometheus.Desc
 }
 
 func newResticCollector(cfg config) *resticCollector {
@@ -296,8 +296,13 @@ func (c *resticCollector) collectMetrics(ctx context.Context) (metrics, error) {
 
 	var clients []clientMetrics
 	for _, snap := range latestSnapshots {
-		// Per-snapshot stats are intentionally skipped to avoid heavy restic invocations.
 		stats := resticStats{TotalSize: -1, TotalFileCount: -1}
+		if !c.cfg.DisableStatsSnapshotRestoreSize {
+			stats, err = c.restic.getRestoreSize(ctx, snap.ID)
+			if err != nil {
+				return metrics{}, err
+			}
+		}
 
 		firstSnap := firstSnapshots[snap.Hash]
 		clients = append(clients, clientMetrics{
@@ -354,16 +359,16 @@ func (c *resticCollector) collectMetrics(ctx context.Context) (metrics, error) {
 	logger.Debug("Stats raw data collected", "total_size", statsRawData.TotalSize, "compression_ratio", statsRawData.CompressionRatio)
 
 	return metrics{
-		CheckSuccess:                   checkSuccess,
-		LocksTotal:                     locksTotal,
-		Clients:                        clients,
-		SnapshotsTotal:                 float64(len(allSnapshots)),
-		Duration:                       time.Since(start).Seconds(),
-		ScrapeTimestamp:                float64(time.Now().Unix()),
-		RepositoryTotalSize:            statsRawData.TotalSize,
+		CheckSuccess:                    checkSuccess,
+		LocksTotal:                      locksTotal,
+		Clients:                         clients,
+		SnapshotsTotal:                  float64(len(allSnapshots)),
+		Duration:                        time.Since(start).Seconds(),
+		ScrapeTimestamp:                 float64(time.Now().Unix()),
+		RepositoryTotalSize:             statsRawData.TotalSize,
 		RepositoryTotalUncompressedSize: statsRawData.TotalUncompressedSize,
-		CompressionRatio:               statsRawData.CompressionRatio,
-		StatsDuration:                  statsDuration,
+		CompressionRatio:                statsRawData.CompressionRatio,
+		StatsDuration:                   statsDuration,
 	}, nil
 }
 
