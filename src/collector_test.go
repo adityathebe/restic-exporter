@@ -15,8 +15,17 @@ import (
 	"time"
 )
 
-func downloadRestic(t *testing.T) string {
+func ensureRestic(t *testing.T) string {
 	t.Helper()
+
+	// First check if restic is already installed on the system
+	if path, err := exec.LookPath("restic"); err == nil {
+		t.Logf("Using system restic from %s", path)
+		return path
+	}
+
+	// Restic not found, download it
+	t.Log("Restic not found in PATH, downloading...")
 
 	tmpDir := t.TempDir()
 	resticPath := filepath.Join(tmpDir, "restic")
@@ -72,7 +81,7 @@ func downloadRestic(t *testing.T) string {
 }
 
 func TestCollectorIncludesOnlySelectedClients(t *testing.T) {
-	resticPath := downloadRestic(t)
+	resticPath := ensureRestic(t)
 
 	logger = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
