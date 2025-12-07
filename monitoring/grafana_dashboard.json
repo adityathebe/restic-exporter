@@ -246,6 +246,24 @@
           {
             "matcher": {
               "id": "byName",
+              "options": "first_backup"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "auto"
+                }
+              },
+              {
+                "id": "unit",
+                "value": "dateTimeAsIso"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
               "options": "days_since_last_backup"
             },
             "properties": [
@@ -397,6 +415,21 @@
           "intervalFactor": 1,
           "legendFormat": "{{client_hostname}}",
           "refId": "E"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "exemplar": true,
+          "expr": "restic_backup_first_timestamp * 1000",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{client_hostname}}",
+          "refId": "F"
         }
       ],
       "title": "Backup Statistics",
@@ -429,9 +462,10 @@
             "indexByName": {
               "Value #A": 3,
               "Value #B": 4,
-              "Value #C": 5,
-              "Value #D": 6,
-              "Value #E": 7,
+              "Value #C": 6,
+              "Value #D": 7,
+              "Value #E": 8,
+              "Value #F": 5,
               "client_hostname": 0,
               "client_version": 1,
               "snapshot_paths": 2
@@ -442,6 +476,7 @@
               "Value #C": "total_files",
               "Value #D": "total_backup_size",
               "Value #E": "total_snapshots",
+              "Value #F": "first_backup",
               "client_hostname": "client",
               "client_version": "restic_version",
               "snapshot_paths": "path"

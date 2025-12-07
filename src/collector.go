@@ -42,6 +42,7 @@ type clientMetrics struct {
 	SnapshotTags   string
 	SnapshotPaths  string
 	Timestamp      float64
+	FirstTimestamp float64
 	SizeTotal      float64
 	FilesTotal     float64
 	SnapshotsTotal float64
@@ -64,15 +65,16 @@ type resticCollector struct {
 	statsMu    sync.Mutex
 	ready      atomic.Bool
 
-	checkDesc            *prometheus.Desc
-	locksDesc            *prometheus.Desc
-	snapshotsDesc        *prometheus.Desc
-	backupTimestampDesc  *prometheus.Desc
-	backupFilesTotalDesc *prometheus.Desc
-	backupSizeTotalDesc  *prometheus.Desc
-	backupSnapshotsDesc  *prometheus.Desc
-	scrapeDurationDesc   *prometheus.Desc
-	scrapeTimestampDesc  *prometheus.Desc
+	checkDesc                *prometheus.Desc
+	locksDesc                *prometheus.Desc
+	snapshotsDesc            *prometheus.Desc
+	backupTimestampDesc      *prometheus.Desc
+	backupFirstTimestampDesc *prometheus.Desc
+	backupFilesTotalDesc     *prometheus.Desc
+	backupSizeTotalDesc      *prometheus.Desc
+	backupSnapshotsDesc      *prometheus.Desc
+	scrapeDurationDesc       *prometheus.Desc
+	scrapeTimestampDesc      *prometheus.Desc
 }
 
 func newResticCollector(cfg config) *resticCollector {
@@ -114,6 +116,12 @@ func newResticCollector(cfg config) *resticCollector {
 			commonLabels,
 			nil,
 		),
+		backupFirstTimestampDesc: prometheus.NewDesc(
+			"restic_backup_first_timestamp",
+			"Timestamp of the first backup",
+			commonLabels,
+			nil,
+		),
 		backupFilesTotalDesc: prometheus.NewDesc(
 			"restic_backup_files_total",
 			"Number of files in the backup",
@@ -152,6 +160,7 @@ func (c *resticCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.locksDesc
 	ch <- c.snapshotsDesc
 	ch <- c.backupTimestampDesc
+	ch <- c.backupFirstTimestampDesc
 	ch <- c.backupFilesTotalDesc
 	ch <- c.backupSizeTotalDesc
 	ch <- c.backupSnapshotsDesc
@@ -179,6 +188,7 @@ func (c *resticCollector) Collect(ch chan<- prometheus.Metric) {
 			client.SnapshotPaths,
 		}
 		ch <- prometheus.MustNewConstMetric(c.backupTimestampDesc, prometheus.GaugeValue, client.Timestamp, labels...)
+		ch <- prometheus.MustNewConstMetric(c.backupFirstTimestampDesc, prometheus.GaugeValue, client.FirstTimestamp, labels...)
 		ch <- prometheus.MustNewConstMetric(c.backupFilesTotalDesc, prometheus.CounterValue, client.FilesTotal, labels...)
 		ch <- prometheus.MustNewConstMetric(c.backupSizeTotalDesc, prometheus.CounterValue, client.SizeTotal, labels...)
 		ch <- prometheus.MustNewConstMetric(c.backupSnapshotsDesc, prometheus.CounterValue, client.SnapshotsTotal, labels...)
@@ -232,6 +242,7 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 	}
 
 	latestSnapshots := make(map[string]snapshot)
+	firstSnapshots := make(map[string]snapshot)
 	for _, snap := range allSnapshots {
 		ts, err := parseResticTime(snap.Time)
 		if err != nil {
@@ -241,8 +252,11 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 		if existing, ok := latestSnapshots[snap.Hash]; !ok || snap.Timestamp > existing.Timestamp {
 			latestSnapshots[snap.Hash] = snap
 		}
+		if existing, ok := firstSnapshots[snap.Hash]; !ok || snap.Timestamp < existing.Timestamp {
+			firstSnapshots[snap.Hash] = snap
+		}
 	}
-	logger.Debug("Selected latest snapshot entries", "count", len(latestSnapshots))
+	logger.Debug("selected latest snapshot entries", "count", len(latestSnapshots))
 
 	var clients []clientMetrics
 	for _, snap := range latestSnapshots {
@@ -256,6 +270,7 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 			}
 		}
 
+		firstSnap := firstSnapshots[snap.Hash]
 		clients = append(clients, clientMetrics{
 			Hostname:       snap.Hostname,
 			Username:       snap.Username,
@@ -265,6 +280,7 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 			SnapshotTags:   strings.Join(snap.Tags, ","),
 			SnapshotPaths:  snapshotPaths(c.cfg.IncludePaths, snap.Paths),
 			Timestamp:      snap.Timestamp,
+			FirstTimestamp: firstSnap.Timestamp,
 			SizeTotal:      stats.TotalSize,
 			FilesTotal:     stats.TotalFileCount,
 			SnapshotsTotal: float64(snapshotCounts[snap.Hash]),
