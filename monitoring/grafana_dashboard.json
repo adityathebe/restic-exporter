@@ -319,7 +319,7 @@
         ]
       },
       "gridPos": {
-        "h": 10,
+        "h": 7,
         "w": 24,
         "x": 0,
         "y": 3
@@ -554,7 +554,7 @@
         "h": 7,
         "w": 8,
         "x": 0,
-        "y": 13
+        "y": 10
       },
       "id": 8,
       "options": {
@@ -657,7 +657,7 @@
         "h": 7,
         "w": 8,
         "x": 8,
-        "y": 13
+        "y": 10
       },
       "id": 41,
       "options": {
@@ -760,7 +760,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 13
+        "y": 10
       },
       "id": 30,
       "options": {
@@ -863,7 +863,7 @@
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 20
+        "y": 17
       },
       "id": 43,
       "options": {
@@ -887,15 +887,54 @@
             "uid": "prometheus"
           },
           "exemplar": true,
+          "expr": "max without (pod, instance, endpoint) (restic_snapshots_restore_size_duration_seconds)",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "Snapshots Restore Size Duration",
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "exemplar": true,
+          "expr": "max without (pod, instance, endpoint) (restic_repository_check_duration_seconds)",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "Repository Check Duration",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "exemplar": true,
+          "expr": "max without (pod, instance, endpoint) (restic_raw_data_stats_duration_seconds)",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "Raw Data Stats Duration",
+          "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "exemplar": true,
           "expr": "max without (pod, instance, endpoint) (restic_scrape_duration_seconds)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "Scrape Duration",
-          "refId": "A"
+          "refId": "D"
         }
       ],
-      "title": "Scrape Duration",
+      "title": "Command Durations",
       "type": "timeseries"
     },
     {
@@ -993,7 +1032,7 @@
         "h": 7,
         "w": 16,
         "x": 0,
-        "y": 27
+        "y": 24
       },
       "id": 44,
       "options": {
@@ -1080,7 +1119,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 27
+        "y": 24
       },
       "id": 45,
       "options": {
