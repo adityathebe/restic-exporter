@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -182,7 +183,11 @@ func (c *resticCollector) Collect(ch chan<- prometheus.Metric) {
 
 func (c *resticCollector) Refresh() {
 	logger.Debug("Starting metrics refresh")
-	m, err := c.collectMetrics()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	m, err := c.collectMetrics(ctx)
 	if err != nil {
 		logger.Error("Unable to collect metrics from Restic", "error", err)
 		os.Exit(1)
@@ -199,10 +204,10 @@ func (c *resticCollector) Ready() bool {
 	return c.ready.Load()
 }
 
-func (c *resticCollector) collectMetrics() (metrics, error) {
+func (c *resticCollector) collectMetrics(ctx context.Context) (metrics, error) {
 	start := time.Now()
 
-	allSnapshots, err := c.restic.getSnapshots()
+	allSnapshots, err := c.restic.getSnapshots(ctx)
 	if err != nil {
 		return metrics{}, err
 	}
@@ -246,7 +251,7 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 		if c.cfg.DisableStats {
 			stats = resticStats{TotalSize: -1, TotalFileCount: -1}
 		} else {
-			stats, err = c.restic.getStats(snap.ID)
+			stats, err = c.restic.getStats(ctx, snap.ID)
 			if err != nil {
 				return metrics{}, err
 			}
@@ -273,7 +278,7 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 	if c.cfg.DisableCheck {
 		checkSuccess = 2
 	} else {
-		checkSuccess, err = c.restic.getCheck()
+		checkSuccess, err = c.restic.getCheck(ctx)
 		if err != nil {
 			return metrics{}, err
 		}
@@ -284,7 +289,7 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 	if c.cfg.DisableLocks {
 		locksTotal = 0
 	} else {
-		locksTotal, err = c.restic.getLocks()
+		locksTotal, err = c.restic.getLocks(ctx)
 		if err != nil {
 			return metrics{}, err
 		}
