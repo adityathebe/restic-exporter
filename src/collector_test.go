@@ -2,6 +2,7 @@ package main
 
 import (
 	"compress/bzip2"
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -125,7 +126,11 @@ func TestCollectorIncludesOnlySelectedClients(t *testing.T) {
 	}
 
 	collector := newResticCollector(cfg)
-	m, err := collector.collectMetrics()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	m, err := collector.collectMetrics(ctx)
 	if err != nil {
 		t.Fatalf("collect metrics: %v", err)
 	}

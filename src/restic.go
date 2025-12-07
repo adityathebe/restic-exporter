@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"time"
 )
 
 type resticStats struct {
@@ -59,14 +58,14 @@ func (r *resticClient) resticBaseArgs() []string {
 	return args
 }
 
-func (r *resticClient) getSnapshots() ([]snapshot, error) {
+func (r *resticClient) getSnapshots(ctx context.Context) ([]snapshot, error) {
 	args := append(r.resticBaseArgs(), "snapshots", "--json")
 	if r.insecureTLS {
 		args = append(args, "--insecure-tls")
 	}
 	logger.Debug("Running restic snapshots")
 
-	stdout, stderr, err := r.runRestic(args)
+	stdout, stderr, err := r.runRestic(ctx, args)
 	if err != nil {
 		return nil, fmt.Errorf("Error executing restic snapshot command: %s", formatCommandError(err, stderr))
 	}
@@ -83,7 +82,7 @@ func (r *resticClient) getSnapshots() ([]snapshot, error) {
 	return snaps, nil
 }
 
-func (r *resticClient) getStats(snapshotID string) (resticStats, error) {
+func (r *resticClient) getStats(ctx context.Context, snapshotID string) (resticStats, error) {
 	if snapshotID != "" {
 		r.statsMu.Lock()
 		stats, ok := r.statsCache[snapshotID]
@@ -102,7 +101,7 @@ func (r *resticClient) getStats(snapshotID string) (resticStats, error) {
 	}
 	logger.Debug("Running restic stats", "snapshot_id", snapshotID)
 
-	stdout, stderr, err := r.runRestic(args)
+	stdout, stderr, err := r.runRestic(ctx, args)
 	if err != nil {
 		return resticStats{}, fmt.Errorf("Error executing restic stats command: %s", formatCommandError(err, stderr))
 	}
@@ -138,14 +137,14 @@ func (r *resticClient) evictStaleStatsCache(validSnapshotIDs map[string]bool) {
 	}
 }
 
-func (r *resticClient) getCheck() (float64, error) {
+func (r *resticClient) getCheck(ctx context.Context) (float64, error) {
 	args := append(r.resticBaseArgs(), "check")
 	if r.insecureTLS {
 		args = append(args, "--insecure-tls")
 	}
 	logger.Debug("Running restic check")
 
-	_, stderr, err := r.runRestic(args)
+	_, stderr, err := r.runRestic(ctx, args)
 	if err != nil {
 		logger.Warn("Error checking repository health", "error", formatCommandError(err, stderr))
 		return 0, nil
@@ -154,21 +153,21 @@ func (r *resticClient) getCheck() (float64, error) {
 	return 1, nil
 }
 
-func (r *resticClient) getLocks() (float64, error) {
+func (r *resticClient) getLocks(ctx context.Context) (float64, error) {
 	args := append(r.resticBaseArgs(), "list", "locks")
 	if r.insecureTLS {
 		args = append(args, "--insecure-tls")
 	}
 	logger.Debug("Running restic list locks")
 
-	stdout, stderr, err := r.runRestic(args)
+	stdout, stderr, err := r.runRestic(ctx, args)
 	if err != nil {
 		return 0, fmt.Errorf("Error executing restic list locks command: %s", formatCommandError(err, stderr))
 	}
 
 	reLock := regexp.MustCompile(`^[a-z0-9]+$`)
 	count := 0
-	for _, line := range strings.Split(string(stdout), "\n") {
+	for line := range strings.SplitSeq(string(stdout), "\n") {
 		if reLock.MatchString(strings.TrimSpace(line)) {
 			count++
 		}
@@ -177,10 +176,7 @@ func (r *resticClient) getLocks() (float64, error) {
 	return float64(count), nil
 }
 
-func (r *resticClient) runRestic(args []string) ([]byte, string, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-
+func (r *resticClient) runRestic(ctx context.Context, args []string) ([]byte, string, error) {
 	var stdout, stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, r.binaryPath, args...)
 	cmd.Stdout = &stdout
