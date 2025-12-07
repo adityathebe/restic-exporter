@@ -17,6 +17,16 @@ type resticStats struct {
 	TotalFileCount float64 `json:"total_file_count"`
 }
 
+type resticStatsRawData struct {
+	TotalSize             float64 `json:"total_size"`
+	TotalUncompressedSize float64 `json:"total_uncompressed_size"`
+	CompressionRatio      float64 `json:"compression_ratio"`
+	CompressionProgress   float64 `json:"compression_progress"`
+	CompressionSpaceSaving float64 `json:"compression_space_saving"`
+	TotalBlobCount        float64 `json:"total_blob_count"`
+	SnapshotsCount        float64 `json:"snapshots_count"`
+}
+
 type snapshot struct {
 	ID             string   `json:"id"`
 	Time           string   `json:"time"`
@@ -115,6 +125,26 @@ func (r *resticClient) getStats(ctx context.Context, snapshotID string) (resticS
 		r.statsMu.Lock()
 		r.statsCache[snapshotID] = stats
 		r.statsMu.Unlock()
+	}
+
+	return stats, nil
+}
+
+func (r *resticClient) getStatsRawData(ctx context.Context) (resticStatsRawData, error) {
+	args := append(r.resticBaseArgs(), "stats", "--mode", "raw-data", "--json")
+	if r.insecureTLS {
+		args = append(args, "--insecure-tls")
+	}
+	logger.Debug("Running restic stats --mode raw-data")
+
+	stdout, stderr, err := r.runRestic(ctx, args)
+	if err != nil {
+		return resticStatsRawData{}, fmt.Errorf("Error executing restic stats raw-data command: %s", formatCommandError(err, stderr))
+	}
+
+	var stats resticStatsRawData
+	if err := json.Unmarshal(stdout, &stats); err != nil {
+		return resticStatsRawData{}, fmt.Errorf("decode restic stats raw-data: %w", err)
 	}
 
 	return stats, nil

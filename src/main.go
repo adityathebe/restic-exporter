@@ -36,19 +36,20 @@ func newLogger(raw string) *slog.Logger {
 }
 
 type config struct {
-	Repository       string
-	Password         string
-	PasswordFile     string
-	ResticBinaryPath string
-	ListenAddress    string
-	ListenPort       int
-	RefreshInterval  time.Duration
-	DisableCheck     bool
-	DisableStats     bool
-	DisableLocks     bool
-	IncludePaths     bool
-	InsecureTLS      bool
-	IncludeClients   []string
+	Repository        string
+	Password          string
+	PasswordFile      string
+	ResticBinaryPath  string
+	ListenAddress     string
+	ListenPort        int
+	RefreshInterval   time.Duration
+	DisableCheck      bool
+	DisableStats      bool
+	DisableLocks      bool
+	DisableStatsRawData bool
+	IncludePaths      bool
+	InsecureTLS       bool
+	IncludeClients    []string
 }
 
 func main() {
@@ -87,18 +88,19 @@ func main() {
 	}
 
 	cfg := config{
-		Repository:      repoURL,
-		Password:        password,
-		PasswordFile:    passwordFile,
-		ListenAddress:   listenAddress,
-		ListenPort:      listenPort,
-		RefreshInterval: time.Duration(refreshSeconds) * time.Second,
-		DisableCheck:    envBool("NO_CHECK"),
-		DisableStats:    envBool("NO_STATS"),
-		DisableLocks:    envBool("NO_LOCKS"),
-		IncludePaths:    envBool("INCLUDE_PATHS"),
-		InsecureTLS:     envBool("INSECURE_TLS"),
-		IncludeClients:  envCSV("INCLUDE_CLIENTS"),
+		Repository:        repoURL,
+		Password:          password,
+		PasswordFile:      passwordFile,
+		ListenAddress:     listenAddress,
+		ListenPort:        listenPort,
+		RefreshInterval:   time.Duration(refreshSeconds) * time.Second,
+		DisableCheck:      envBool("NO_CHECK"),
+		DisableStats:      envBool("NO_STATS"),
+		DisableLocks:      envBool("NO_LOCKS"),
+		DisableStatsRawData: envBool("NO_STATS_RAW_DATA"),
+		IncludePaths:      envBool("INCLUDE_PATHS"),
+		InsecureTLS:       envBool("INSECURE_TLS"),
+		IncludeClients:    envCSV("INCLUDE_CLIENTS"),
 	}
 
 	collector := newResticCollector(cfg)
