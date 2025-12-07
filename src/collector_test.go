@@ -208,9 +208,10 @@ func TestCollectorErrorMetricClearsOnSuccess(t *testing.T) {
 	}
 	runResticCmd(t, resticPath, repoDir, password, "backup", sourceDir)
 
-	cfg := config{
+	// First, create a collector with invalid password to simulate error
+	cfgBad := config{
 		Repository:       repoDir,
-		Password:         password,
+		Password:         "wrongpassword",
 		ResticBinaryPath: resticPath,
 		DisableCheck:     true,
 		DisableLocks:     true,
@@ -219,20 +220,28 @@ func TestCollectorErrorMetricClearsOnSuccess(t *testing.T) {
 		RefreshInterval:  time.Second,
 	}
 
-	collector := newResticCollector(cfg)
+	collector := newResticCollector(cfgBad)
 
-	// Set an initial error state by manually setting the error metric
-	collector.mu.Lock()
-	collector.metrics.ScrapeError = 1
-	collector.mu.Unlock()
-	collector.ready.Store(true)
+	// First refresh with wrong password should fail
+	collector.Refresh()
 
-	// Now do a successful refresh
+	// Verify error metric is set
+	collector.mu.RLock()
+	errorMetric := collector.metrics.ScrapeError
+	collector.mu.RUnlock()
+
+	if errorMetric != 1 {
+		t.Fatalf("expected error metric to be 1 after failed scrape, got %v", errorMetric)
+	}
+
+	// Now fix the password and do a successful refresh
+	collector.restic.password = password
+
 	collector.Refresh()
 
 	// Check that error metric is cleared (set to 0) on success
 	collector.mu.RLock()
-	errorMetric := collector.metrics.ScrapeError
+	errorMetric = collector.metrics.ScrapeError
 	collector.mu.RUnlock()
 
 	if errorMetric != 0 {
