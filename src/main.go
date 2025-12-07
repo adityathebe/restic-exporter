@@ -44,7 +44,6 @@ type config struct {
 	ListenPort        int
 	RefreshInterval   time.Duration
 	DisableCheck      bool
-	DisableStats      bool
 	DisableLocks      bool
 	DisableStatsRawData bool
 	IncludePaths      bool
@@ -95,7 +94,6 @@ func main() {
 		ListenPort:        listenPort,
 		RefreshInterval:   time.Duration(refreshSeconds) * time.Second,
 		DisableCheck:      envBool("NO_CHECK"),
-		DisableStats:      envBool("NO_STATS"),
 		DisableLocks:      envBool("NO_LOCKS"),
 		DisableStatsRawData: envBool("NO_STATS_RAW_DATA"),
 		IncludePaths:      envBool("INCLUDE_PATHS"),

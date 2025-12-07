@@ -296,15 +296,8 @@ func (c *resticCollector) collectMetrics(ctx context.Context) (metrics, error) {
 
 	var clients []clientMetrics
 	for _, snap := range latestSnapshots {
-		var stats resticStats
-		if c.cfg.DisableStats {
-			stats = resticStats{TotalSize: -1, TotalFileCount: -1}
-		} else {
-			stats, err = c.restic.getStats(ctx, snap.ID)
-			if err != nil {
-				return metrics{}, err
-			}
-		}
+		// Per-snapshot stats are intentionally skipped to avoid heavy restic invocations.
+		stats := resticStats{TotalSize: -1, TotalFileCount: -1}
 
 		firstSnap := firstSnapshots[snap.Hash]
 		clients = append(clients, clientMetrics{

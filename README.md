@@ -46,8 +46,8 @@ All configuration is done with environment variables:
 | `LISTEN_PORT`      | `8001`      | No       | Port for the HTTP server.                                                                                    |
 | `LOG_LEVEL`        | `INFO`      | No       | Log level (`DEBUG`, `INFO`, `WARN`, `ERROR`).                                                                |
 | `NO_CHECK`         | empty/false | No       | If set, skip `restic check` for faster scrapes.                                                              |
-| `NO_STATS`         | empty/false | No       | If set, skip collecting per-snapshot stats from `restic stats` (size and file counts).                       |
 | `NO_LOCKS`         | empty/false | No       | If set, skip lock counting.                                                                                  |
+| `NO_STATS_RAW_DATA`| empty/false | No       | If set, skip repository-wide raw data stats (`restic stats --mode raw-data`) and related metrics.            |
 | `INCLUDE_PATHS`    | empty/false | No       | If set, include snapshot paths in metrics (comma-separated).                                                 |
 | `INCLUDE_CLIENTS`  | empty/false | No       | Comma-separated list of client hostnames to include; if set, snapshots from other clients are ignored.       |
 | `INSECURE_TLS`     | empty/false | No       | If set, skip TLS verification (self-signed endpoints).                                                       |
@@ -77,6 +77,12 @@ services:
 ```
 
 ## Exported metrics
+
+Additional repository-wide stats:
+- `restic_repository_total_size_bytes`: total repository size in bytes (raw data)
+- `restic_repository_total_uncompressed_size_bytes`: total uncompressed size in bytes
+- `restic_compression_ratio`: ratio of uncompressed to compressed data
+- `restic_stats_duration_seconds`: time spent running `restic stats --mode raw-data`
 
 ```bash
 # HELP restic_check_success Result of restic check operation in the repository
