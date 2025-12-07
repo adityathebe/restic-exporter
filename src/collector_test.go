@@ -192,6 +192,54 @@ func TestCollectorErrorMetric(t *testing.T) {
 	}
 }
 
+func TestCollectorErrorMetricClearsOnSuccess(t *testing.T) {
+	resticPath := ensureRestic(t)
+	logger = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	repoDir := t.TempDir()
+	sourceDir := t.TempDir()
+	password := "testpass"
+
+	runResticCmd(t, resticPath, repoDir, password, "init")
+
+	file1 := filepath.Join(sourceDir, "file1.txt")
+	if err := os.WriteFile(file1, []byte("test backup"), 0o600); err != nil {
+		t.Fatalf("write file1: %v", err)
+	}
+	runResticCmd(t, resticPath, repoDir, password, "backup", sourceDir)
+
+	cfg := config{
+		Repository:       repoDir,
+		Password:         password,
+		ResticBinaryPath: resticPath,
+		DisableCheck:     true,
+		DisableLocks:     true,
+		IncludePaths:     false,
+		InsecureTLS:      false,
+		RefreshInterval:  time.Second,
+	}
+
+	collector := newResticCollector(cfg)
+
+	// Set an initial error state by manually setting the error metric
+	collector.mu.Lock()
+	collector.metrics.ScrapeError = 1
+	collector.mu.Unlock()
+	collector.ready.Store(true)
+
+	// Now do a successful refresh
+	collector.Refresh()
+
+	// Check that error metric is cleared (set to 0) on success
+	collector.mu.RLock()
+	errorMetric := collector.metrics.ScrapeError
+	collector.mu.RUnlock()
+
+	if errorMetric != 0 {
+		t.Fatalf("expected error metric to be 0 on successful scrape, got %v", errorMetric)
+	}
+}
+
 func runResticCmd(t *testing.T, resticPath, repoDir, password string, args ...string) {
 	t.Helper()
 
