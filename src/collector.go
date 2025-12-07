@@ -1,13 +1,8 @@
 package main
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
-	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -15,23 +10,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 )
-
-type resticStats struct {
-	TotalSize      float64 `json:"total_size"`
-	TotalFileCount float64 `json:"total_file_count"`
-}
-
-type snapshot struct {
-	ID             string   `json:"id"`
-	Time           string   `json:"time"`
-	Paths          []string `json:"paths"`
-	Tags           []string `json:"tags"`
-	Hostname       string   `json:"hostname"`
-	Username       string   `json:"username"`
-	ProgramVersion string   `json:"program_version"`
-	Hash           string   `json:"-"`
-	Timestamp      float64  `json:"-"`
-}
 
 type clientMetrics struct {
 	Hostname       string
@@ -58,11 +36,10 @@ type metrics struct {
 }
 
 type resticCollector struct {
-	cfg        config
-	statsCache map[string]resticStats
+	cfg    config
+	restic *resticClient
 	metrics    metrics
 	mu         sync.RWMutex
-	statsMu    sync.Mutex
 	ready      atomic.Bool
 
 	checkDesc                *prometheus.Desc
@@ -88,10 +65,15 @@ func newResticCollector(cfg config) *resticCollector {
 		"snapshot_paths",
 	}
 
+	resticClient := newResticClient(cfg.Repository, cfg.Password, cfg.PasswordFile, cfg.InsecureTLS)
+	if cfg.ResticBinaryPath != "" {
+		resticClient.binaryPath = cfg.ResticBinaryPath
+	}
+
 	return &resticCollector{
-		cfg:        cfg,
-		statsCache: make(map[string]resticStats),
-		metrics:    metrics{},
+		cfg:     cfg,
+		restic:  resticClient,
+		metrics: metrics{},
 		checkDesc: prometheus.NewDesc(
 			"restic_check_success",
 			"Result of restic check operation in the repository",
@@ -220,7 +202,7 @@ func (c *resticCollector) Ready() bool {
 func (c *resticCollector) collectMetrics() (metrics, error) {
 	start := time.Now()
 
-	allSnapshots, err := c.getSnapshots(false)
+	allSnapshots, err := c.restic.getSnapshots()
 	if err != nil {
 		return metrics{}, err
 	}
@@ -234,7 +216,7 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 	}
 
 	// Evict cache entries for snapshots that no longer exist
-	c.evictStaleStatsCache(validSnapshotIDs)
+	c.restic.evictStaleStatsCache(validSnapshotIDs)
 
 	snapshotCounts := make(map[string]int)
 	for _, snap := range allSnapshots {
@@ -264,7 +246,7 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 		if c.cfg.DisableStats {
 			stats = resticStats{TotalSize: -1, TotalFileCount: -1}
 		} else {
-			stats, err = c.getStats(snap.ID)
+			stats, err = c.restic.getStats(snap.ID)
 			if err != nil {
 				return metrics{}, err
 			}
@@ -291,7 +273,7 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 	if c.cfg.DisableCheck {
 		checkSuccess = 2
 	} else {
-		checkSuccess, err = c.getCheck()
+		checkSuccess, err = c.restic.getCheck()
 		if err != nil {
 			return metrics{}, err
 		}
@@ -302,7 +284,7 @@ func (c *resticCollector) collectMetrics() (metrics, error) {
 	if c.cfg.DisableLocks {
 		locksTotal = 0
 	} else {
-		locksTotal, err = c.getLocks()
+		locksTotal, err = c.restic.getLocks()
 		if err != nil {
 			return metrics{}, err
 		}
@@ -344,150 +326,4 @@ func (c *resticCollector) filterSnapshotsByClient(snaps []snapshot) []snapshot {
 	}
 
 	return filtered
-}
-
-func (c *resticCollector) resticBaseArgs() []string {
-	args := []string{"-r", c.cfg.Repository, "--no-lock"}
-	if c.cfg.PasswordFile != "" {
-		args = append(args, "-p", c.cfg.PasswordFile)
-	}
-	return args
-}
-
-func (c *resticCollector) getSnapshots(onlyLatest bool) ([]snapshot, error) {
-	args := append(c.resticBaseArgs(), "snapshots", "--json")
-	if onlyLatest {
-		args = append(args, "--latest", "1")
-	}
-	if c.cfg.InsecureTLS {
-		args = append(args, "--insecure-tls")
-	}
-	logger.Debug("Running restic snapshots", "latest_only", onlyLatest)
-
-	stdout, stderr, err := c.runRestic(args)
-	if err != nil {
-		return nil, fmt.Errorf("Error executing restic snapshot command: %s", formatCommandError(err, stderr))
-	}
-
-	var snaps []snapshot
-	if err := json.Unmarshal(stdout, &snaps); err != nil {
-		return nil, fmt.Errorf("decode restic snapshots: %w", err)
-	}
-
-	for i := range snaps {
-		snaps[i].Hash = calcSnapshotHash(snaps[i])
-	}
-
-	return snaps, nil
-}
-
-func (c *resticCollector) getStats(snapshotID string) (resticStats, error) {
-	if snapshotID != "" {
-		c.statsMu.Lock()
-		stats, ok := c.statsCache[snapshotID]
-		c.statsMu.Unlock()
-		if ok {
-			return stats, nil
-		}
-	}
-
-	args := append(c.resticBaseArgs(), "stats", "--json")
-	if snapshotID != "" {
-		args = append(args, snapshotID)
-	}
-	if c.cfg.InsecureTLS {
-		args = append(args, "--insecure-tls")
-	}
-	logger.Debug("Running restic stats", "snapshot_id", snapshotID)
-
-	stdout, stderr, err := c.runRestic(args)
-	if err != nil {
-		return resticStats{}, fmt.Errorf("Error executing restic stats command: %s", formatCommandError(err, stderr))
-	}
-
-	var stats resticStats
-	if err := json.Unmarshal(stdout, &stats); err != nil {
-		return resticStats{}, fmt.Errorf("decode restic stats: %w", err)
-	}
-
-	if snapshotID != "" {
-		c.statsMu.Lock()
-		c.statsCache[snapshotID] = stats
-		c.statsMu.Unlock()
-	}
-
-	return stats, nil
-}
-
-func (c *resticCollector) evictStaleStatsCache(validSnapshotIDs map[string]bool) {
-	c.statsMu.Lock()
-	defer c.statsMu.Unlock()
-
-	var evicted int
-	for snapshotID := range c.statsCache {
-		if !validSnapshotIDs[snapshotID] {
-			delete(c.statsCache, snapshotID)
-			evicted++
-		}
-	}
-
-	if evicted > 0 {
-		logger.Debug("Evicted stale stats cache entries", "count", evicted, "remaining", len(c.statsCache))
-	}
-}
-
-func (c *resticCollector) getCheck() (float64, error) {
-	args := append(c.resticBaseArgs(), "check")
-	if c.cfg.InsecureTLS {
-		args = append(args, "--insecure-tls")
-	}
-	logger.Debug("Running restic check")
-
-	_, stderr, err := c.runRestic(args)
-	if err != nil {
-		logger.Warn("Error checking repository health", "error", formatCommandError(err, stderr))
-		return 0, nil
-	}
-
-	return 1, nil
-}
-
-func (c *resticCollector) getLocks() (float64, error) {
-	args := append(c.resticBaseArgs(), "list", "locks")
-	if c.cfg.InsecureTLS {
-		args = append(args, "--insecure-tls")
-	}
-	logger.Debug("Running restic list locks")
-
-	stdout, stderr, err := c.runRestic(args)
-	if err != nil {
-		return 0, fmt.Errorf("Error executing restic list locks command: %s", formatCommandError(err, stderr))
-	}
-
-	reLock := regexp.MustCompile(`^[a-z0-9]+$`)
-	count := 0
-	for _, line := range strings.Split(string(stdout), "\n") {
-		if reLock.MatchString(strings.TrimSpace(line)) {
-			count++
-		}
-	}
-
-	return float64(count), nil
-}
-
-func (c *resticCollector) runRestic(args []string) ([]byte, string, error) {
-	// Set a timeout of 5 minutes for Restic commands to prevent indefinite hangs
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
-	defer cancel()
-
-	var stdout, stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, "restic", args...)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if c.cfg.Password != "" && c.cfg.PasswordFile == "" {
-		cmd.Env = append(os.Environ(), "RESTIC_PASSWORD="+c.cfg.Password)
-	}
-
-	err := cmd.Run()
-	return stdout.Bytes(), stderr.String(), err
 }
