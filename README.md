@@ -89,9 +89,18 @@ restic_repository_total_uncompressed_size_bytes 1.1e+10
 # HELP restic_compression_ratio Compression ratio of the repository
 # TYPE restic_compression_ratio gauge
 restic_compression_ratio 2.3
-# HELP restic_stats_duration_seconds Duration to run the stats command
-# TYPE restic_stats_duration_seconds gauge
-restic_stats_duration_seconds 12.4
+# HELP restic_raw_data_stats_duration_seconds Duration to run the restic stats --mode raw-data command
+# TYPE restic_raw_data_stats_duration_seconds gauge
+restic_raw_data_stats_duration_seconds 12.4
+# HELP restic_snapshots_duration_seconds Duration to run the restic snapshots command
+# TYPE restic_snapshots_duration_seconds gauge
+restic_snapshots_duration_seconds 4.2
+# HELP restic_snapshots_restore_size_duration_seconds Total duration spent collecting restore-size stats for the latest snapshots
+# TYPE restic_snapshots_restore_size_duration_seconds gauge
+restic_snapshots_restore_size_duration_seconds 8.5
+# HELP restic_repository_check_duration_seconds Duration to run the restic check command
+# TYPE restic_repository_check_duration_seconds gauge
+restic_repository_check_duration_seconds 2.1
 # HELP restic_check_success Result of restic check operation in the repository
 # TYPE restic_check_success gauge
 restic_check_success 1.0
