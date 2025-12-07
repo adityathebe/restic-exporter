@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -38,6 +37,7 @@ type metrics struct {
 	RepositoryTotalUncompressedSize float64
 	CompressionRatio                float64
 	StatsDuration                   float64
+	ScrapeError                     float64
 }
 
 type resticCollector struct {
@@ -61,6 +61,7 @@ type resticCollector struct {
 	repositoryTotalUncompressedSizeDesc *prometheus.Desc
 	compressionRatioDesc                *prometheus.Desc
 	statsDurationDesc                   *prometheus.Desc
+	scrapeErrorDesc                     *prometheus.Desc
 }
 
 func newResticCollector(cfg config) *resticCollector {
@@ -167,6 +168,12 @@ func newResticCollector(cfg config) *resticCollector {
 			nil,
 			nil,
 		),
+		scrapeErrorDesc: prometheus.NewDesc(
+			"restic_scrape_error",
+			"1 if there was an error during the last scrape, 0 otherwise",
+			nil,
+			nil,
+		),
 	}
 }
 
@@ -185,6 +192,7 @@ func (c *resticCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.repositoryTotalUncompressedSizeDesc
 	ch <- c.compressionRatioDesc
 	ch <- c.statsDurationDesc
+	ch <- c.scrapeErrorDesc
 }
 
 func (c *resticCollector) Collect(ch chan<- prometheus.Metric) {
@@ -228,6 +236,8 @@ func (c *resticCollector) Collect(ch chan<- prometheus.Metric) {
 	if m.StatsDuration >= 0 {
 		ch <- prometheus.MustNewConstMetric(c.statsDurationDesc, prometheus.GaugeValue, m.StatsDuration)
 	}
+
+	ch <- prometheus.MustNewConstMetric(c.scrapeErrorDesc, prometheus.GaugeValue, m.ScrapeError)
 }
 
 func (c *resticCollector) Refresh() {
@@ -239,8 +249,16 @@ func (c *resticCollector) Refresh() {
 	m, err := c.collectMetrics(ctx)
 	if err != nil {
 		logger.Error("Unable to collect metrics from Restic", "error", err)
-		os.Exit(1)
+		// Set error metric instead of exiting
+		c.mu.Lock()
+		c.metrics.ScrapeError = 1
+		c.mu.Unlock()
+		c.ready.Store(true)
+		return
 	}
+
+	// Clear error metric on successful scrape
+	m.ScrapeError = 0
 
 	c.mu.Lock()
 	c.metrics = m

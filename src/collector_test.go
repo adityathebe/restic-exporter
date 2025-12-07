@@ -152,6 +152,46 @@ func TestCollectorIncludesOnlySelectedClients(t *testing.T) {
 	}
 }
 
+func TestCollectorErrorMetric(t *testing.T) {
+	logger = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	// Use an invalid repository path that will cause an error
+	cfg := config{
+		Repository:       "/nonexistent/repo/path",
+		Password:         "testpass",
+		ResticBinaryPath: "restic",
+		DisableCheck:     true,
+		DisableLocks:     true,
+		IncludePaths:     false,
+		InsecureTLS:      false,
+		RefreshInterval:  time.Second,
+	}
+
+	collector := newResticCollector(cfg)
+
+	// Initially, should not be ready
+	if collector.Ready() {
+		t.Fatal("collector should not be ready initially")
+	}
+
+	// Trigger refresh with invalid repo - should not exit
+	collector.Refresh()
+
+	// After refresh, should be ready (even with error)
+	if !collector.Ready() {
+		t.Fatal("collector should be ready after refresh, even on error")
+	}
+
+	// Check that error metric is set to 1
+	collector.mu.RLock()
+	errorMetric := collector.metrics.ScrapeError
+	collector.mu.RUnlock()
+
+	if errorMetric != 1 {
+		t.Fatalf("expected error metric to be 1, got %v", errorMetric)
+	}
+}
+
 func runResticCmd(t *testing.T, resticPath, repoDir, password string, args ...string) {
 	t.Helper()
 
