@@ -900,12 +900,25 @@
             "uid": "prometheus"
           },
           "exemplar": true,
+          "expr": "max without (pod, instance, endpoint) (restic_snapshots_duration_seconds)",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "Snapshots Duration",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "exemplar": true,
           "expr": "max without (pod, instance, endpoint) (restic_repository_check_duration_seconds)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "Repository Check Duration",
-          "refId": "B"
+          "refId": "C"
         },
         {
           "datasource": {
@@ -918,7 +931,7 @@
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "Raw Data Stats Duration",
-          "refId": "C"
+          "refId": "D"
         },
         {
           "datasource": {
@@ -931,7 +944,7 @@
           "interval": "",
           "intervalFactor": 2,
           "legendFormat": "Scrape Duration",
-          "refId": "D"
+          "refId": "E"
         }
       ],
       "title": "Command Durations",
