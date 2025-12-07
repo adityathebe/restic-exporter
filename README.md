@@ -78,7 +78,7 @@ services:
 
 ## Exported metrics
 
-Additional repository-wide stats:
+Additional repository-wide stats (enabled by default; disable with `NO_STATS_RAW_DATA`):
 - `restic_repository_total_size_bytes`: total repository size in bytes (raw data)
 - `restic_repository_total_uncompressed_size_bytes`: total uncompressed size in bytes
 - `restic_compression_ratio`: ratio of uncompressed to compressed data
