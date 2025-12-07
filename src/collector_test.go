@@ -1,20 +1,78 @@
 package main
 
 import (
+	"compress/bzip2"
+	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 )
 
-func TestCollectorIncludesOnlySelectedClients(t *testing.T) {
-	if _, err := exec.LookPath("restic"); err != nil {
-		t.Skip("restic binary required for integration test: " + err.Error())
+func downloadRestic(t *testing.T) string {
+	t.Helper()
+
+	tmpDir := t.TempDir()
+	resticPath := filepath.Join(tmpDir, "restic")
+
+	// Determine architecture
+	arch := runtime.GOARCH
+	goos := runtime.GOOS
+
+	// Map Go arch names to restic release names
+	archMap := map[string]string{
+		"amd64": "amd64",
+		"arm64": "arm64",
+		"386":   "386",
+		"arm":   "arm",
 	}
+
+	resticArch, ok := archMap[arch]
+	if !ok {
+		t.Fatalf("unsupported architecture: %s", arch)
+	}
+
+	version := "0.18.1"
+	url := fmt.Sprintf("https://github.com/restic/restic/releases/download/v%s/restic_%s_%s_%s.bz2",
+		version, version, goos, resticArch)
+
+	t.Logf("Downloading restic from %s", url)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		t.Fatalf("failed to download restic: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("failed to download restic: HTTP %d", resp.StatusCode)
+	}
+
+	// Decompress bz2
+	bzReader := bzip2.NewReader(resp.Body)
+
+	outFile, err := os.OpenFile(resticPath, os.O_CREATE|os.O_WRONLY, 0755)
+	if err != nil {
+		t.Fatalf("failed to create restic binary: %v", err)
+	}
+	defer outFile.Close()
+
+	if _, err := io.Copy(outFile, bzReader); err != nil {
+		t.Fatalf("failed to extract restic: %v", err)
+	}
+
+	t.Logf("Downloaded restic to %s", resticPath)
+	return resticPath
+}
+
+func TestCollectorIncludesOnlySelectedClients(t *testing.T) {
+	resticPath := downloadRestic(t)
 
 	logger = slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
@@ -22,38 +80,39 @@ func TestCollectorIncludesOnlySelectedClients(t *testing.T) {
 	sourceDir := t.TempDir()
 	password := "testpass"
 
-	runResticCmd(t, repoDir, password, "init")
+	runResticCmd(t, resticPath, repoDir, password, "init")
 
 	file1 := filepath.Join(sourceDir, "file1.txt")
 	if err := os.WriteFile(file1, []byte("first backup"), 0o600); err != nil {
 		t.Fatalf("write file1: %v", err)
 	}
-	runResticCmd(t, repoDir, password, "--host", "client-1", "backup", "--tag", "keep", sourceDir)
+	runResticCmd(t, resticPath, repoDir, password, "--host", "client-1", "backup", "--tag", "keep", sourceDir)
 
 	// Second client should be included.
 	if err := os.WriteFile(file1, []byte("second backup"), 0o600); err != nil {
 		t.Fatalf("rewrite file1: %v", err)
 	}
 	time.Sleep(1 * time.Second)
-	runResticCmd(t, repoDir, password, "--host", "client-2", "backup", "--tag", "keep", sourceDir)
+	runResticCmd(t, resticPath, repoDir, password, "--host", "client-2", "backup", "--tag", "keep", sourceDir)
 
 	// Third client should be excluded by filter.
 	if err := os.WriteFile(file1, []byte("third backup"), 0o600); err != nil {
 		t.Fatalf("rewrite file1 (third): %v", err)
 	}
 	time.Sleep(1 * time.Second)
-	runResticCmd(t, repoDir, password, "--host", "client-3", "backup", "--tag", "keep", sourceDir)
+	runResticCmd(t, resticPath, repoDir, password, "--host", "client-3", "backup", "--tag", "keep", sourceDir)
 
 	cfg := config{
-		Repository:      repoDir,
-		Password:        password,
-		DisableCheck:    true,
-		DisableStats:    true,
-		DisableLocks:    true,
-		IncludeClients:  []string{"client-1", "client-2"},
-		IncludePaths:    false,
-		InsecureTLS:     false,
-		RefreshInterval: time.Second,
+		Repository:       repoDir,
+		Password:         password,
+		ResticBinaryPath: resticPath,
+		DisableCheck:     true,
+		DisableStats:     true,
+		DisableLocks:     true,
+		IncludeClients:   []string{"client-1", "client-2"},
+		IncludePaths:     false,
+		InsecureTLS:      false,
+		RefreshInterval:  time.Second,
 	}
 
 	collector := newResticCollector(cfg)
@@ -80,13 +139,13 @@ func TestCollectorIncludesOnlySelectedClients(t *testing.T) {
 	}
 }
 
-func runResticCmd(t *testing.T, repoDir, password string, args ...string) {
+func runResticCmd(t *testing.T, resticPath, repoDir, password string, args ...string) {
 	t.Helper()
 
 	fullArgs := []string{"-r", repoDir, "--no-lock"}
 	fullArgs = append(fullArgs, args...)
 
-	cmd := exec.Command("restic", fullArgs...)
+	cmd := exec.Command(resticPath, fullArgs...)
 	cmd.Env = append(os.Environ(), "RESTIC_PASSWORD="+password)
 
 	output, err := cmd.CombinedOutput()

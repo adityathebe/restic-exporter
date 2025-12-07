@@ -36,18 +36,19 @@ func newLogger(raw string) *slog.Logger {
 }
 
 type config struct {
-	Repository      string
-	Password        string
-	PasswordFile    string
-	ListenAddress   string
-	ListenPort      int
-	RefreshInterval time.Duration
-	DisableCheck    bool
-	DisableStats    bool
-	DisableLocks    bool
-	IncludePaths    bool
-	InsecureTLS     bool
-	IncludeClients  []string
+	Repository       string
+	Password         string
+	PasswordFile     string
+	ResticBinaryPath string
+	ListenAddress    string
+	ListenPort       int
+	RefreshInterval  time.Duration
+	DisableCheck     bool
+	DisableStats     bool
+	DisableLocks     bool
+	IncludePaths     bool
+	InsecureTLS      bool
+	IncludeClients   []string
 }
 
 func main() {
