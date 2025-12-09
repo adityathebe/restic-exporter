@@ -263,10 +263,12 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "exemplar": true,
+          "exemplar": false,
           "expr": "max without (pod, instance) (restic_scrape_success)",
           "interval": "",
           "legendFormat": "",
+          "range": false,
+          "instant": true,
           "refId": "A"
         }
       ],
@@ -402,7 +404,7 @@
         ]
       },
       "gridPos": {
-        "h": 7,
+        "h": 5,
         "w": 24,
         "x": 0,
         "y": 3
