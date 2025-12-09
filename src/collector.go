@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -44,11 +43,12 @@ type metrics struct {
 }
 
 type resticCollector struct {
-	cfg     config
-	restic  *resticClient
-	metrics metrics
-	mu      sync.RWMutex
-	ready   atomic.Bool
+	cfg           config
+	restic        *resticClient
+	metrics       metrics
+	mu            sync.RWMutex
+	ready         atomic.Bool
+	scrapeSuccess atomic.Int32
 
 	checkDesc                           *prometheus.Desc
 	locksDesc                           *prometheus.Desc
@@ -67,6 +67,7 @@ type resticCollector struct {
 	repositoryTotalUncompressedSizeDesc *prometheus.Desc
 	compressionRatioDesc                *prometheus.Desc
 	rawDataStatsDurationDesc            *prometheus.Desc
+	scrapeSuccessDesc                   *prometheus.Desc
 }
 
 func newResticCollector(cfg config) *resticCollector {
@@ -191,6 +192,12 @@ func newResticCollector(cfg config) *resticCollector {
 			nil,
 			nil,
 		),
+		scrapeSuccessDesc: prometheus.NewDesc(
+			"restic_scrape_success",
+			"1 if the last scrape succeeded, 0 otherwise",
+			nil,
+			nil,
+		),
 	}
 }
 
@@ -212,6 +219,7 @@ func (c *resticCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.repositoryTotalUncompressedSizeDesc
 	ch <- c.compressionRatioDesc
 	ch <- c.rawDataStatsDurationDesc
+	ch <- c.scrapeSuccessDesc
 }
 
 func (c *resticCollector) Collect(ch chan<- prometheus.Metric) {
@@ -262,6 +270,9 @@ func (c *resticCollector) Collect(ch chan<- prometheus.Metric) {
 	if m.RawDataStatsDuration >= 0 {
 		ch <- prometheus.MustNewConstMetric(c.rawDataStatsDurationDesc, prometheus.GaugeValue, m.RawDataStatsDuration)
 	}
+
+	scrapeSuccess := float64(c.scrapeSuccess.Load())
+	ch <- prometheus.MustNewConstMetric(c.scrapeSuccessDesc, prometheus.GaugeValue, scrapeSuccess)
 }
 
 func (c *resticCollector) Refresh() {
@@ -273,14 +284,20 @@ func (c *resticCollector) Refresh() {
 	m, err := c.collectMetrics(ctx)
 	if err != nil {
 		logger.Error("Unable to collect metrics from Restic", "error", err)
-		os.Exit(1)
+		// Mark scrape as failed instead of exiting
+		c.scrapeSuccess.Store(0)
+		c.ready.Store(true)
+		return
 	}
 
 	c.mu.Lock()
 	c.metrics = m
 	c.mu.Unlock()
+
+	c.scrapeSuccess.Store(1)
 	c.ready.Store(true)
-	logger.Debug("Metrics refresh completed")
+
+	logger.Debug("metrics refresh completed")
 }
 
 func (c *resticCollector) Ready() bool {
