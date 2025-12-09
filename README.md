@@ -128,6 +128,9 @@ restic_scrape_duration_seconds 166.9411084651947
 # HELP restic_last_scrape_timestamp_seconds Unix timestamp of the last metrics scrape
 # TYPE restic_last_scrape_timestamp_seconds gauge
 restic_last_scrape_timestamp_seconds 1.699e+09
+# HELP restic_scrape_success 1 if the last scrape succeeded, 0 otherwise
+# TYPE restic_scrape_success gauge
+restic_scrape_success 1
 ```
 
 ## Prometheus config
