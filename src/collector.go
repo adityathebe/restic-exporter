@@ -72,6 +72,7 @@ type resticCollector struct {
 
 func newResticCollector(cfg config) *resticCollector {
 	commonLabels := []string{
+		"repository",
 		"client_hostname",
 		"client_username",
 		"client_version",
@@ -233,6 +234,7 @@ func (c *resticCollector) Collect(ch chan<- prometheus.Metric) {
 
 	for _, client := range m.Clients {
 		labels := []string{
+			c.restic.repository,
 			client.Hostname,
 			client.Username,
 			client.Version,
@@ -312,9 +314,9 @@ func (c *resticCollector) collectMetrics(ctx context.Context) (metrics, error) {
 	if err != nil {
 		return metrics{}, err
 	}
+
 	snapshotsDuration := time.Since(snapshotsStart).Seconds()
 	allSnapshots = c.filterSnapshotsByClient(allSnapshots)
-	logger.Debug("Loaded total snapshots", "count", len(allSnapshots))
 
 	// Build set of valid snapshot IDs for cache eviction
 	validSnapshotIDs := make(map[string]bool, len(allSnapshots))

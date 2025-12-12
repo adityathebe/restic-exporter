@@ -23,3 +23,4 @@ make test               # Run all tests with verbose output (go test -v ./...)
 ## Notes
 
 - don't run go build and leave the build artifacts on the repository
+- use `python3` not `python`
