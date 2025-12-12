@@ -49,9 +49,10 @@ All configuration is done with environment variables:
 | `NO_LOCKS`                       | empty/false | No       | If set, skip lock counting.                                                                                  |
 | `NO_STATS_SNAPSHOT_RESTORE_SIZE` | empty/false | No       | If set, skip per-snapshot restore size stats for the latest snapshots (`restic stats <snapshot>`);           |
 | `NO_STATS_RAW_DATA`              | empty/false | No       | If set, skip repository-wide raw data stats (`restic stats --mode raw-data`) and related metrics.            |
-| `INCLUDE_PATHS`                  | empty/false | No       | If set, include snapshot paths in metrics (comma-separated).                                                 |
 | `INCLUDE_CLIENTS`                | empty/false | No       | Comma-separated list of client hostnames to include; if set, snapshots from other clients are ignored.       |
 | `INSECURE_TLS`                   | empty/false | No       | If set, skip TLS verification (self-signed endpoints).                                                       |
+
+Snapshot paths are always included in metrics to make per-path snapshots visible by default.
 
 ### Configuration for Rclone
 

@@ -374,7 +374,7 @@ func (c *resticCollector) collectMetrics(ctx context.Context) (metrics, error) {
 			SnapshotHash:   snap.Hash,
 			SnapshotTag:    firstTag(snap.Tags),
 			SnapshotTags:   strings.Join(snap.Tags, ","),
-			SnapshotPaths:  snapshotPaths(c.cfg.IncludePaths, snap.Paths),
+			SnapshotPaths:  snapshotPaths(snap.Paths),
 			Timestamp:      snap.Timestamp,
 			FirstTimestamp: firstSnap.Timestamp,
 			SizeTotal:      stats.TotalSize,

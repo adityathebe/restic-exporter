@@ -47,7 +47,6 @@ type config struct {
 	DisableLocks                    bool
 	DisableStatsSnapshotRestoreSize bool
 	DisableStatsRawData             bool
-	IncludePaths                    bool
 	InsecureTLS                     bool
 	IncludeClients                  []string
 }
@@ -100,7 +99,6 @@ func main() {
 		DisableLocks:                    envBool("NO_LOCKS"),
 		DisableStatsSnapshotRestoreSize: disableSnapshotStats,
 		DisableStatsRawData:             envBool("NO_STATS_RAW_DATA"),
-		IncludePaths:                    envBool("INCLUDE_PATHS"),
 		InsecureTLS:                     envBool("INSECURE_TLS"),
 		IncludeClients:                  envCSV("INCLUDE_CLIENTS"),
 	}

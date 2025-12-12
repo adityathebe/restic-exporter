@@ -76,10 +76,7 @@ func firstTag(tags []string) string {
 	return tags[0]
 }
 
-func snapshotPaths(includePaths bool, paths []string) string {
-	if !includePaths {
-		return ""
-	}
+func snapshotPaths(paths []string) string {
 	return strings.Join(paths, ",")
 }
 

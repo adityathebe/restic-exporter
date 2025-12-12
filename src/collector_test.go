@@ -119,7 +119,6 @@ func TestCollectorIncludesOnlySelectedClients(t *testing.T) {
 		DisableCheck:     true,
 		DisableLocks:     true,
 		IncludeClients:   []string{"client-1", "client-2"},
-		IncludePaths:     false,
 		InsecureTLS:      false,
 		RefreshInterval:  time.Second,
 	}
