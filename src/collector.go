@@ -71,6 +71,7 @@ type resticCollector struct {
 }
 
 func newResticCollector(cfg config) *resticCollector {
+	repoLabel := []string{"repository"}
 	commonLabels := []string{
 		"repository",
 		"client_hostname",
@@ -94,19 +95,19 @@ func newResticCollector(cfg config) *resticCollector {
 		checkDesc: prometheus.NewDesc(
 			"restic_check_success",
 			"Result of restic check operation in the repository",
-			nil,
+			repoLabel,
 			nil,
 		),
 		locksDesc: prometheus.NewDesc(
 			"restic_locks_total",
 			"Total number of locks in the repository",
-			nil,
+			repoLabel,
 			nil,
 		),
 		snapshotsDesc: prometheus.NewDesc(
 			"restic_snapshots_total",
 			"Total number of snapshots in the repository",
-			nil,
+			repoLabel,
 			nil,
 		),
 		backupTimestampDesc: prometheus.NewDesc(
@@ -142,61 +143,61 @@ func newResticCollector(cfg config) *resticCollector {
 		scrapeDurationDesc: prometheus.NewDesc(
 			"restic_scrape_duration_seconds",
 			"Amount of time each scrape takes",
-			nil,
+			repoLabel,
 			nil,
 		),
 		scrapeTimestampDesc: prometheus.NewDesc(
 			"restic_last_scrape_timestamp_seconds",
 			"Unix timestamp of the last metrics scrape from the restic repository",
-			nil,
+			repoLabel,
 			nil,
 		),
 		snapshotsDurationDesc: prometheus.NewDesc(
 			"restic_snapshots_duration_seconds",
 			"Duration to run the restic snapshots command",
-			nil,
+			repoLabel,
 			nil,
 		),
 		snapshotsRestoreSizeDurationDesc: prometheus.NewDesc(
 			"restic_snapshots_restore_size_duration_seconds",
 			"Total duration spent collecting restore-size stats for the latest snapshots",
-			nil,
+			repoLabel,
 			nil,
 		),
 		repositoryCheckDurationDesc: prometheus.NewDesc(
 			"restic_repository_check_duration_seconds",
 			"Duration to run the restic check command",
-			nil,
+			repoLabel,
 			nil,
 		),
 		repositoryTotalSizeDesc: prometheus.NewDesc(
 			"restic_repository_total_size_bytes",
 			"Total size of the repository in bytes (raw data)",
-			nil,
+			repoLabel,
 			nil,
 		),
 		repositoryTotalUncompressedSizeDesc: prometheus.NewDesc(
 			"restic_repository_total_uncompressed_size_bytes",
 			"Total uncompressed size of the repository in bytes",
-			nil,
+			repoLabel,
 			nil,
 		),
 		compressionRatioDesc: prometheus.NewDesc(
 			"restic_compression_ratio",
 			"Compression ratio of the repository",
-			nil,
+			repoLabel,
 			nil,
 		),
 		rawDataStatsDurationDesc: prometheus.NewDesc(
 			"restic_raw_data_stats_duration_seconds",
 			"Duration to run the restic stats --mode raw-data command",
-			nil,
+			repoLabel,
 			nil,
 		),
 		scrapeSuccessDesc: prometheus.NewDesc(
 			"restic_scrape_success",
 			"1 if the last scrape succeeded, 0 otherwise",
-			nil,
+			repoLabel,
 			nil,
 		),
 	}
@@ -228,9 +229,9 @@ func (c *resticCollector) Collect(ch chan<- prometheus.Metric) {
 	m := c.metrics
 	c.mu.RUnlock()
 
-	ch <- prometheus.MustNewConstMetric(c.checkDesc, prometheus.GaugeValue, m.CheckSuccess)
-	ch <- prometheus.MustNewConstMetric(c.locksDesc, prometheus.CounterValue, m.LocksTotal)
-	ch <- prometheus.MustNewConstMetric(c.snapshotsDesc, prometheus.CounterValue, m.SnapshotsTotal)
+	ch <- prometheus.MustNewConstMetric(c.checkDesc, prometheus.GaugeValue, m.CheckSuccess, c.restic.repository)
+	ch <- prometheus.MustNewConstMetric(c.locksDesc, prometheus.CounterValue, m.LocksTotal, c.restic.repository)
+	ch <- prometheus.MustNewConstMetric(c.snapshotsDesc, prometheus.CounterValue, m.SnapshotsTotal, c.restic.repository)
 
 	for _, client := range m.Clients {
 		labels := []string{
@@ -250,31 +251,31 @@ func (c *resticCollector) Collect(ch chan<- prometheus.Metric) {
 		ch <- prometheus.MustNewConstMetric(c.backupSnapshotsDesc, prometheus.CounterValue, client.SnapshotsTotal, labels...)
 	}
 
-	ch <- prometheus.MustNewConstMetric(c.scrapeDurationDesc, prometheus.GaugeValue, m.Duration)
-	ch <- prometheus.MustNewConstMetric(c.scrapeTimestampDesc, prometheus.GaugeValue, m.ScrapeTimestamp)
-	ch <- prometheus.MustNewConstMetric(c.snapshotsDurationDesc, prometheus.GaugeValue, m.SnapshotsDuration)
+	ch <- prometheus.MustNewConstMetric(c.scrapeDurationDesc, prometheus.GaugeValue, m.Duration, c.restic.repository)
+	ch <- prometheus.MustNewConstMetric(c.scrapeTimestampDesc, prometheus.GaugeValue, m.ScrapeTimestamp, c.restic.repository)
+	ch <- prometheus.MustNewConstMetric(c.snapshotsDurationDesc, prometheus.GaugeValue, m.SnapshotsDuration, c.restic.repository)
 	if m.SnapshotsRestoreSizeDuration >= 0 {
-		ch <- prometheus.MustNewConstMetric(c.snapshotsRestoreSizeDurationDesc, prometheus.GaugeValue, m.SnapshotsRestoreSizeDuration)
+		ch <- prometheus.MustNewConstMetric(c.snapshotsRestoreSizeDurationDesc, prometheus.GaugeValue, m.SnapshotsRestoreSizeDuration, c.restic.repository)
 	}
 	if m.RepositoryCheckDuration >= 0 {
-		ch <- prometheus.MustNewConstMetric(c.repositoryCheckDurationDesc, prometheus.GaugeValue, m.RepositoryCheckDuration)
+		ch <- prometheus.MustNewConstMetric(c.repositoryCheckDurationDesc, prometheus.GaugeValue, m.RepositoryCheckDuration, c.restic.repository)
 	}
 
 	if m.RepositoryTotalSize >= 0 {
-		ch <- prometheus.MustNewConstMetric(c.repositoryTotalSizeDesc, prometheus.GaugeValue, m.RepositoryTotalSize)
+		ch <- prometheus.MustNewConstMetric(c.repositoryTotalSizeDesc, prometheus.GaugeValue, m.RepositoryTotalSize, c.restic.repository)
 	}
 	if m.RepositoryTotalUncompressedSize >= 0 {
-		ch <- prometheus.MustNewConstMetric(c.repositoryTotalUncompressedSizeDesc, prometheus.GaugeValue, m.RepositoryTotalUncompressedSize)
+		ch <- prometheus.MustNewConstMetric(c.repositoryTotalUncompressedSizeDesc, prometheus.GaugeValue, m.RepositoryTotalUncompressedSize, c.restic.repository)
 	}
 	if m.CompressionRatio >= 0 {
-		ch <- prometheus.MustNewConstMetric(c.compressionRatioDesc, prometheus.GaugeValue, m.CompressionRatio)
+		ch <- prometheus.MustNewConstMetric(c.compressionRatioDesc, prometheus.GaugeValue, m.CompressionRatio, c.restic.repository)
 	}
 	if m.RawDataStatsDuration >= 0 {
-		ch <- prometheus.MustNewConstMetric(c.rawDataStatsDurationDesc, prometheus.GaugeValue, m.RawDataStatsDuration)
+		ch <- prometheus.MustNewConstMetric(c.rawDataStatsDurationDesc, prometheus.GaugeValue, m.RawDataStatsDuration, c.restic.repository)
 	}
 
 	scrapeSuccess := float64(c.scrapeSuccess.Load())
-	ch <- prometheus.MustNewConstMetric(c.scrapeSuccessDesc, prometheus.GaugeValue, scrapeSuccess)
+	ch <- prometheus.MustNewConstMetric(c.scrapeSuccessDesc, prometheus.GaugeValue, scrapeSuccess, c.restic.repository)
 }
 
 func (c *resticCollector) Refresh() {
