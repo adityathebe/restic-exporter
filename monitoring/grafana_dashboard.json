@@ -108,7 +108,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "max without (pod, instance) (restic_check_success)",
+          "expr": "max without (pod, instance) (restic_check_success{repository=~\"$repository\"})",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -180,7 +180,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "time() - max without (pod, instance, endpoint) (restic_last_scrape_timestamp_seconds)",
+          "expr": "time() - max without (pod, instance, endpoint) (restic_last_scrape_timestamp_seconds{repository=~\"$repository\"})",
           "instant": true,
           "interval": "",
           "legendFormat": "",
@@ -264,7 +264,7 @@
             "uid": "prometheus"
           },
           "exemplar": false,
-          "expr": "max without (pod, instance) (restic_scrape_success)",
+          "expr": "max without (pod, instance) (restic_scrape_success{repository=~\"$repository\"})",
           "interval": "",
           "legendFormat": "",
           "range": false,
@@ -430,7 +430,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "restic_backup_timestamp * 1000",
+          "expr": "restic_backup_timestamp{repository=~\"$repository\"} * 1000",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -445,7 +445,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "(time() - restic_backup_timestamp) / 86400",
+          "expr": "(time() - restic_backup_timestamp{repository=~\"$repository\"}) / 86400",
           "format": "table",
           "hide": false,
           "instant": true,
@@ -461,7 +461,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (client_hostname, client_version, snapshot_paths) (restic_backup_files_total)",
+          "expr": "sum by (client_hostname, client_version, snapshot_paths) (restic_backup_files_total{repository=~\"$repository\"})",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -477,7 +477,7 @@
           },
           "editorMode": "code",
           "exemplar": false,
-          "expr": "sum by (client_hostname, snapshot_paths) (restic_backup_size_total)",
+          "expr": "sum by (client_hostname, snapshot_paths) (restic_backup_size_total{repository=~\"$repository\"})",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -493,7 +493,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "restic_backup_snapshots_total",
+          "expr": "restic_backup_snapshots_total{repository=~\"$repository\"}",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -508,7 +508,7 @@
           },
           "editorMode": "code",
           "exemplar": true,
-          "expr": "restic_backup_first_timestamp * 1000",
+          "expr": "restic_backup_first_timestamp{repository=~\"$repository\"} * 1000",
           "format": "table",
           "instant": true,
           "interval": "",
@@ -663,7 +663,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "sum by(client_hostname,snapshot_paths) (restic_backup_size_total)",
+          "expr": "sum by(client_hostname,snapshot_paths) (restic_backup_size_total{repository=~\"$repository\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -766,7 +766,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "sum by(client_hostname,snapshot_paths) (restic_backup_files_total)",
+          "expr": "sum by(client_hostname,snapshot_paths) (restic_backup_files_total{repository=~\"$repository\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -869,7 +869,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "max by(client_hostname,snapshot_paths) (restic_backup_snapshots_total)",
+          "expr": "max by(client_hostname,snapshot_paths) (restic_backup_snapshots_total{repository=~\"$repository\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -972,7 +972,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "max without (pod, instance, endpoint) (restic_snapshots_restore_size_duration_seconds)",
+          "expr": "max without (pod, instance, endpoint) (restic_snapshots_restore_size_duration_seconds{repository=~\"$repository\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -985,7 +985,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "max without (pod, instance, endpoint) (restic_snapshots_duration_seconds)",
+          "expr": "max without (pod, instance, endpoint) (restic_snapshots_duration_seconds{repository=~\"$repository\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -998,7 +998,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "max without (pod, instance, endpoint) (restic_repository_check_duration_seconds)",
+          "expr": "max without (pod, instance, endpoint) (restic_repository_check_duration_seconds{repository=~\"$repository\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1011,7 +1011,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "max without (pod, instance, endpoint) (restic_raw_data_stats_duration_seconds)",
+          "expr": "max without (pod, instance, endpoint) (restic_raw_data_stats_duration_seconds{repository=~\"$repository\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1024,7 +1024,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "max without (pod, instance, endpoint) (restic_scrape_duration_seconds)",
+          "expr": "max without (pod, instance, endpoint) (restic_scrape_duration_seconds{repository=~\"$repository\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1154,7 +1154,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "max without (pod, instance, endpoint) (restic_repository_total_size_bytes)",
+          "expr": "max without (pod, instance, endpoint) (restic_repository_total_size_bytes{repository=~\"$repository\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1167,7 +1167,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "max without (pod, instance, endpoint) (restic_repository_total_uncompressed_size_bytes)",
+          "expr": "max without (pod, instance, endpoint) (restic_repository_total_uncompressed_size_bytes{repository=~\"$repository\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1241,7 +1241,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "max without (pod, instance, endpoint) (restic_compression_ratio)",
+          "expr": "max without (pod, instance, endpoint) (restic_compression_ratio{repository=~\"$repository\"})",
           "interval": "",
           "legendFormat": "Compression Ratio",
           "refId": "A"
@@ -1256,7 +1256,34 @@
   "schemaVersion": 42,
   "tags": ["system"],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "",
+          "value": ""
+        },
+        "datasource": {
+          "type": "prometheus",
+          "uid": "prometheus"
+        },
+        "definition": "label_values(restic_backup_timestamp, repository)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Repository",
+        "multi": true,
+        "name": "repository",
+        "options": [],
+        "query": {
+          "query": "label_values(restic_backup_timestamp, repository)",
+          "refId": "Prometheus-repository-Variable-Query"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "type": "query"
+      }
+    ]
   },
   "time": {
     "from": "now-7d",
