@@ -318,6 +318,8 @@ func (c *resticCollector) collectMetrics(ctx context.Context) (metrics, error) {
 	snapshotsDuration := time.Since(snapshotsStart).Seconds()
 	allSnapshots = c.filterSnapshotsByClient(allSnapshots)
 
+	logger.Debug("fetched snapshots", "count", len(allSnapshots))
+
 	// Build set of valid snapshot IDs for cache eviction
 	validSnapshotIDs := make(map[string]bool, len(allSnapshots))
 	for _, snap := range allSnapshots {

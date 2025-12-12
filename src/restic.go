@@ -84,7 +84,6 @@ func (r *resticClient) getSnapshots(ctx context.Context) ([]snapshot, error) {
 	if err := json.Unmarshal(stdout, &snaps); err != nil {
 		return nil, fmt.Errorf("decode restic snapshots: %w", err)
 	}
-	logger.Debug(fmt.Sprintf("got %d snapshots", len(snaps)), "snapshots", stdout)
 
 	for i := range snaps {
 		snaps[i].Hash = calcSnapshotHash(snaps[i])
