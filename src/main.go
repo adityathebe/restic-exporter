@@ -44,7 +44,6 @@ type config struct {
 	ListenPort                      int
 	RefreshInterval                 time.Duration
 	DisableCheck                    bool
-	DisableLocks                    bool
 	DisableStatsSnapshotRestoreSize bool
 	DisableStatsRawData             bool
 	InsecureTLS                     bool
@@ -96,7 +95,6 @@ func main() {
 		ListenPort:                      listenPort,
 		RefreshInterval:                 time.Duration(refreshSeconds) * time.Second,
 		DisableCheck:                    envBool("NO_CHECK"),
-		DisableLocks:                    envBool("NO_LOCKS"),
 		DisableStatsSnapshotRestoreSize: disableSnapshotStats,
 		DisableStatsRawData:             envBool("NO_STATS_RAW_DATA"),
 		InsecureTLS:                     envBool("INSECURE_TLS"),

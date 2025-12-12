@@ -117,7 +117,6 @@ func TestCollectorIncludesOnlySelectedClients(t *testing.T) {
 		Password:         password,
 		ResticBinaryPath: resticPath,
 		DisableCheck:     true,
-		DisableLocks:     true,
 		IncludeClients:   []string{"client-1", "client-2"},
 		InsecureTLS:      false,
 		RefreshInterval:  time.Second,

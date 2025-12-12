@@ -28,7 +28,6 @@ type clientMetrics struct {
 
 type metrics struct {
 	CheckSuccess                    float64
-	LocksTotal                      float64
 	Clients                         []clientMetrics
 	SnapshotsTotal                  float64
 	Duration                        float64
@@ -51,7 +50,6 @@ type resticCollector struct {
 	scrapeSuccess atomic.Int32
 
 	checkDesc                           *prometheus.Desc
-	locksDesc                           *prometheus.Desc
 	snapshotsDesc                       *prometheus.Desc
 	backupTimestampDesc                 *prometheus.Desc
 	backupFirstTimestampDesc            *prometheus.Desc
@@ -95,12 +93,6 @@ func newResticCollector(cfg config) *resticCollector {
 		checkDesc: prometheus.NewDesc(
 			"restic_check_success",
 			"Result of restic check operation in the repository",
-			repoLabel,
-			nil,
-		),
-		locksDesc: prometheus.NewDesc(
-			"restic_locks_total",
-			"Total number of locks in the repository",
 			repoLabel,
 			nil,
 		),
@@ -205,7 +197,6 @@ func newResticCollector(cfg config) *resticCollector {
 
 func (c *resticCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.checkDesc
-	ch <- c.locksDesc
 	ch <- c.snapshotsDesc
 	ch <- c.backupTimestampDesc
 	ch <- c.backupFirstTimestampDesc
@@ -230,7 +221,6 @@ func (c *resticCollector) Collect(ch chan<- prometheus.Metric) {
 	c.mu.RUnlock()
 
 	ch <- prometheus.MustNewConstMetric(c.checkDesc, prometheus.GaugeValue, m.CheckSuccess, c.restic.repository)
-	ch <- prometheus.MustNewConstMetric(c.locksDesc, prometheus.CounterValue, m.LocksTotal, c.restic.repository)
 	ch <- prometheus.MustNewConstMetric(c.snapshotsDesc, prometheus.CounterValue, m.SnapshotsTotal, c.restic.repository)
 
 	for _, client := range m.Clients {
@@ -400,17 +390,6 @@ func (c *resticCollector) collectMetrics(ctx context.Context) (metrics, error) {
 	}
 	logger.Debug("Check success metric collected", "value", checkSuccess)
 
-	var locksTotal float64
-	if c.cfg.DisableLocks {
-		locksTotal = 0
-	} else {
-		locksTotal, err = c.restic.getLocks(ctx)
-		if err != nil {
-			return metrics{}, err
-		}
-	}
-	logger.Debug("Locks collected", "value", locksTotal)
-
 	var statsRawData resticStatsRawData
 	var rawDataStatsDuration float64
 	if c.cfg.DisableStatsRawData {
@@ -428,7 +407,6 @@ func (c *resticCollector) collectMetrics(ctx context.Context) (metrics, error) {
 
 	return metrics{
 		CheckSuccess:                    checkSuccess,
-		LocksTotal:                      locksTotal,
 		Clients:                         clients,
 		SnapshotsTotal:                  float64(len(allSnapshots)),
 		Duration:                        time.Since(start).Seconds(),

@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"regexp"
-	"strings"
 	"sync"
 )
 
@@ -181,29 +179,6 @@ func (r *resticClient) getCheck(ctx context.Context) (float64, error) {
 	}
 
 	return 1, nil
-}
-
-func (r *resticClient) getLocks(ctx context.Context) (float64, error) {
-	args := append(r.resticBaseArgs(), "list", "locks")
-	if r.insecureTLS {
-		args = append(args, "--insecure-tls")
-	}
-	logger.Debug("Running restic list locks")
-
-	stdout, stderr, err := r.runRestic(ctx, args)
-	if err != nil {
-		return 0, fmt.Errorf("Error executing restic list locks command: %s", formatCommandError(err, stderr))
-	}
-
-	reLock := regexp.MustCompile(`^[a-z0-9]+$`)
-	count := 0
-	for line := range strings.SplitSeq(string(stdout), "\n") {
-		if reLock.MatchString(strings.TrimSpace(line)) {
-			count++
-		}
-	}
-
-	return float64(count), nil
 }
 
 func (r *resticClient) runRestic(ctx context.Context, args []string) ([]byte, string, error) {
