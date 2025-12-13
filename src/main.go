@@ -79,7 +79,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	refreshSeconds := envInt("REFRESH_INTERVAL", 60*10) // 10 minutes
+	refreshSeconds := envInt("REFRESH_INTERVAL", 60*60*2) // 2 hours
 	if refreshSeconds <= 0 {
 		logger.Error("REFRESH_INTERVAL must be greater than 0", "seconds", refreshSeconds)
 		os.Exit(1)

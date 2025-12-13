@@ -41,7 +41,7 @@ All configuration is done with environment variables:
 
 | Variable                         | Default     | Required | Description                                                                                                  |
 | -------------------------------- | ----------- | -------- | ------------------------------------------------------------------------------------------------------------ |
-| `REFRESH_INTERVAL`               | `600`       | No       | Refresh interval (seconds) for collecting metrics. Higher values reduce load, especially on remote backends. |
+| `REFRESH_INTERVAL`               | `7200`      | No       | Refresh interval (seconds) for collecting metrics. Higher values reduce load, especially on remote backends. |
 | `LISTEN_ADDRESS`                 | `0.0.0.0`   | No       | Bind address for the HTTP server.                                                                            |
 | `LISTEN_PORT`                    | `8001`      | No       | Port for the HTTP server.                                                                                    |
 | `LOG_LEVEL`                      | `INFO`      | No       | Log level (`DEBUG`, `INFO`, `WARN`, `ERROR`).                                                                |
@@ -67,7 +67,7 @@ services:
       - TZ=Europe/Madrid
       - RESTIC_REPOSITORY=rclone:gd-backup:/restic
       - RESTIC_PASSWORD=
-      - REFRESH_INTERVAL=1800 # 30 min
+      - REFRESH_INTERVAL=7200 # 2 hours
     volumes:
       - /host_path/restic/data:/data
       - /usr/bin/rclone:/usr/bin/rclone:ro
