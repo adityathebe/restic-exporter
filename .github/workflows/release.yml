@@ -16,7 +16,7 @@ jobs:
       new-release-published: ${{ steps.semantic.outputs.new-release-published }}
     steps:
       - uses: actions/checkout@v5
-      - uses: codfish/semantic-release-action@v4
+      - uses: codfish/semantic-release-action@6abd188d2458e2fd6c99073454f6cc49196362e8 #v5
         id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
